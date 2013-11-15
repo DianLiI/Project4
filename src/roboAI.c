@@ -37,7 +37,7 @@
 
 #define ANGLE_TOL 0.0
 #define PI 3.14159265359
-#define MOVE_SPEED 50
+#define MOVE_SPEED 100
 
 /*states*/
 #define PENALTY 101
