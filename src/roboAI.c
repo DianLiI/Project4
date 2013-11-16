@@ -36,19 +36,25 @@
 
 
 #define ANGLE_TOL 0.0
+#define POSITION_TOL 70
 #define PI 3.14159265359
 #define MOVE_SPEED 50
-
+#define KICK_SPEED 100
+#define KICKER_LENGTH 150// 75 
 /*states*/
-#define PENALTY 101
-#define KICK_LEFT 102
-#define KICK_RIGHT 103
-#define SOCCER 1
-#define CHASE 201
-#define P_CHASE_TO_LEFT 104
-#define P_CHASE_TO_RIGHT 105
+#define MODE_SOCCER 0
+#define MODE_PENALTY 1
+#define MODE_CHASE 2
+#define START 1
+#define KICK_LEFT 2
+#define KICK_RIGHT 3
+#define CHASE 4
+#define CHASE_TO_LEFT 5
+#define CHASE_TO_RIGHT 6
 
 int direction = 1;
+double left_pos[2];
+double right_pos[2];
 void clear_motion_flags(struct RoboAI *ai)
 {
     // Reset all motion flags. See roboAI.h for what each flag represents
@@ -371,17 +377,10 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
         *****************************************************************************/
         // track_agents(ai,blobs);        // Currently, does nothing but endlessly track
         // fprintf(stderr,"Just trackin'!\n");    // bot, opponent, and ball.
-
-        switch(ai->st.state){
-            case 101:
-
-                kick();
-                sleep(2);
-                break;
-            case 201:
-                chase(ai);
-                break;
-        }
+        int mode = ai->st.state / 100;
+        int sub_state = ai->st.state % 100;
+        int next_state = fsm(sub_state, ai) + mode * 100;
+        ai->st.state = next_state;
     }
 
 }
@@ -399,6 +398,112 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
  You will lose marks if AI_main() is cluttered with code that doesn't belong
  there.
 **********************************************************************************/
+
+int fsm(int state, struct RoboAI *ai){
+    update_kick_pos(ai);
+    switch(state){
+        case START:
+            at_kick_pos(&state, ai);
+            break;
+        case KICK_RIGHT:
+            break;            
+        case KICK_LEFT:
+            break;
+        case CHASE:
+            chase_left_or_right(&state, ai);
+            break;
+        case CHASE_TO_LEFT:
+        case CHASE_TO_RIGHT:
+            if(!at_kick_pos(&state, ai))
+            {
+                chase_left_or_right(&state, ai);
+            }
+            break;
+    }
+
+    switch(state){
+        case START:
+        case KICK_RIGHT:
+            kick_speed(KICK_SPEED);
+            sleep(1);
+            stop_kicker();
+            break;
+        case KICK_LEFT:
+            kick_speed(-KICK_SPEED);
+            sleep(1);
+            stop_kicker();
+            break;
+        case CHASE_TO_LEFT:
+            chase(ai, left_pos);
+            break;
+        case CHASE_TO_RIGHT:
+            chase(ai, right_pos);
+            break;
+    }
+    fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
+    return state;
+}
+
+bool reachable(double x, double y){
+    return (x > KICKER_LENGTH && x < 1024.0 - KICKER_LENGTH) && (-y > KICKER_LENGTH && -y < 768 - KICKER_LENGTH);
+}
+
+void chase_left_or_right(int *state, struct RoboAI *ai){
+    double sx = ai->st.self->cx[0];
+    double sy = -ai->st.self->cy[0];
+    double left_dist = pow(sx - left_pos[0], 2) + pow(sy - left_pos[1], 2);
+    double right_dist = pow(sx - right_pos[0], 2) + pow(sy - right_pos[1], 2);
+    printf("diff: %f     %d\n", left_dist - right_dist, reachable(left_pos[0], left_pos[1]));
+    if (left_dist < right_dist && reachable(left_pos[0], left_pos[1]))
+    {
+        *state = CHASE_TO_LEFT;
+        fprintf(stderr, "left is closer!!!!!!!!!!!!!!!!!!\n");
+    }
+    else if(left_dist >= right_dist && reachable(right_pos[0], right_pos[1]))
+    {
+        *state = CHASE_TO_RIGHT;
+        fprintf(stderr, "right is closer!!!!!!!!!!!!!!!!!!\n");
+    }
+    else
+    {
+        at_kick_pos(state, ai);
+    }
+}
+void update_kick_pos(struct RoboAI *ai){
+    double gy = -768.0 / 2.0;
+    double gx = (1 - ai->st.side) * 1024.0;
+    double bx = ai->st.ball->cx[0];
+    double by = -ai->st.ball->cy[0];
+    double ball_to_gate[2] = {gx - bx, gy - by};
+    double b[2] = {-ball_to_gate[1], ball_to_gate[0]};
+    double norm_b = sqrt(pow(b[0], 2) + pow(b[1], 2));
+    b[0] = b[0] / norm_b * KICKER_LENGTH;
+    b[1] = b[1] / norm_b * KICKER_LENGTH;
+    left_pos[0] = bx + b[0];
+    left_pos[1] = by + b[1];
+    right_pos[0] = bx - b[0];
+    right_pos[1] = by - b[1];
+}
+
+bool at_kick_pos(int *state, struct RoboAI *ai){
+    double sx = ai->st.self->cx[0];
+    double sy = -ai->st.self->cy[0];
+    if (fabs(left_pos[0] - sx) < POSITION_TOL && fabs(left_pos[1] - sy) < POSITION_TOL)
+    {
+        *state = KICK_LEFT;
+        return true;
+    }
+    else if (fabs(right_pos[0] - sx) < POSITION_TOL && fabs(right_pos[1] - sy) < POSITION_TOL)
+    {
+        *state = KICK_RIGHT;
+        return true;
+    }
+    else{
+        *state = CHASE;
+        return false;
+    }
+    
+}
 int my_round(double number)
 {
     int ret = round(number);
@@ -451,11 +556,11 @@ void move(double theta)
 
     apply_power(my_round(left_power), my_round(right_power));
 }
-void chase(struct RoboAI *ai)
+void chase(struct RoboAI *ai, double *pos)
 {
     // ball position
-    double xb = *(ai->st.ball->cx);
-    double yb = -(*(ai->st.ball->cy));
+    double xb = pos[0];
+    double yb = pos[1];
     // robot position
     double yr = -(*(ai->st.self->cy));
     double xr = *(ai->st.self->cx);
@@ -480,8 +585,8 @@ void chase(struct RoboAI *ai)
     // }
     //fprintf(stderr, "Robot: Current position: (%f,%f), current heading: %f, AI state=%d\n", ai->st.self->cx[0], ai->st.self->cy[0], atan2(ai->st.self->mx, ai->st.self->my), ai->st.state);
     //fprintf(stderr, "Ball: Current position: (%f,%f), current heading: [%f, %f], AI state=%d\n", ai->st.ball->cx[0], ai->st.ball->cy[0], ai->st.ball->mx, ai->st.ball->my, ai->st.state);
-    fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
-    fprintf(stderr, "H: [%f, %f], D: [%f, %f]\n", h[0], h[1], d[0], d[1]);
+    //fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
+    //fprintf(stderr, "H: [%f, %f], D: [%f, %f]\n", h[0], h[1], d[0], d[1]);
     move(theta);
 }
 

@@ -21,7 +21,9 @@
 #define _ROBO_AI_H
 
 #include "imagecapture/imageCapture.h"
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #define AI_SOCCER 0 	// Play soccer!
 #define AI_PENALTY 1    // Go score some goals!
 #define AI_CHASE 2 	// Kick the ball around and chase it!
@@ -130,6 +132,12 @@ void clear_motion_flags(struct RoboAI *ai);
    playing functionality below.
 *****************************************************************************/
 void move(double theta);
-void chase(struct RoboAI *ai);
+void chase(struct RoboAI *ai, double *pos);
 void apply_power(int left_power, int right_power);
+int fsm(int state, struct RoboAI *ai);
+bool reachable(double x, double y);
+void chase_left_or_right(int *state, struct RoboAI *ai);
+void update_kick_pos();
+bool at_kick_pos(int *state, struct RoboAI *ai);
+
 #endif

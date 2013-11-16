@@ -98,7 +98,9 @@ imageCapture.o: imagecapture/imageCapture.c /usr/include/stdc-predef.h \
  imagecapture/uvc_compat.h /usr/include/linux/version.h \
  imagecapture/dynctrl-logitech.h imagecapture/gui.h imagecapture/utils.h \
  imagecapture/color.h imagecapture/svdDynamic.h imagecapture/../roboAI.h \
- imagecapture/../imagecapture/imageCapture.h ../include/nxtlibc/nxtlibc.h
+ imagecapture/../imagecapture/imageCapture.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdbool.h \
+ ../include/nxtlibc/nxtlibc.h
 
 /usr/include/stdc-predef.h:
 
@@ -391,5 +393,7 @@ imagecapture/svdDynamic.h:
 imagecapture/../roboAI.h:
 
 imagecapture/../imagecapture/imageCapture.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdbool.h:
 
 ../include/nxtlibc/nxtlibc.h:

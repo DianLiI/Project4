@@ -97,7 +97,9 @@ roboAI.o: roboAI.c /usr/include/stdc-predef.h \
  /usr/include/linux/kernel.h /usr/include/linux/sysinfo.h \
  imagecapture/uvc_compat.h /usr/include/linux/version.h \
  imagecapture/dynctrl-logitech.h imagecapture/gui.h imagecapture/utils.h \
- imagecapture/color.h roboAI.h ../include/nxtlibc/nxtlibc.h
+ imagecapture/color.h roboAI.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdbool.h \
+ ../include/nxtlibc/nxtlibc.h
 
 /usr/include/stdc-predef.h:
 
@@ -386,5 +388,7 @@ imagecapture/utils.h:
 imagecapture/color.h:
 
 roboAI.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdbool.h:
 
 ../include/nxtlibc/nxtlibc.h:

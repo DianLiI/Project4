@@ -97,7 +97,8 @@ roboSoccer.o: roboSoccer.c /usr/include/stdc-predef.h \
  /usr/include/linux/kernel.h /usr/include/linux/sysinfo.h \
  imagecapture/uvc_compat.h /usr/include/linux/version.h \
  imagecapture/dynctrl-logitech.h imagecapture/gui.h imagecapture/utils.h \
- imagecapture/color.h ../include/nxtlibc/nxtlibc.h roboAI.h
+ imagecapture/color.h ../include/nxtlibc/nxtlibc.h roboAI.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdbool.h
 
 /usr/include/stdc-predef.h:
 
@@ -388,3 +389,5 @@ imagecapture/color.h:
 ../include/nxtlibc/nxtlibc.h:
 
 roboAI.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdbool.h:
