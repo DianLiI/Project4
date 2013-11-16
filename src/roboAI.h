@@ -134,7 +134,7 @@ void clear_motion_flags(struct RoboAI *ai);
 void move(double theta);
 void chase(struct RoboAI *ai, double *pos);
 void apply_power(int left_power, int right_power);
-int fsm(int state, struct RoboAI *ai);
+int fsm(int mode, int state, struct RoboAI *ai);
 bool reachable(double x, double y);
 void chase_left_or_right(int *state, struct RoboAI *ai);
 void update_kick_pos();
@@ -144,4 +144,6 @@ void init_blob(struct blob *myblob);
 void update_pos(struct blob *myblob, struct blob *p, double height);
 void update_blob(struct blob *myblob, struct blob *b, double height);
 void update_my_ai(struct RoboAI *ai);
+bool kick_miss();
+bool find_ball(int *state, struct RoboAI *ai);
 #endif

@@ -55,17 +55,19 @@
 #define MODE_PENALTY 1
 #define MODE_CHASE 2
 #define START 1
-#define KICK_LEFT 2
-#define KICK_RIGHT 3
-#define CHASE 4
+#define FINISH 2
+#define KICK_LEFT 3
+#define KICK_RIGHT 4
 #define CHASE_TO_LEFT 5
 #define CHASE_TO_RIGHT 6
+
 
 int direction = 1;
 double left_pos[2];
 double right_pos[2];
 struct RoboAI *myai;
 double cam_pos[] = {FIELD_LENGTH/2 + CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
+bool kicking = false;
 
 void clear_motion_flags(struct RoboAI *ai)
 {
@@ -393,10 +395,9 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
         int mode = ai->st.state / 100;
         int sub_state = ai->st.state % 100;
         update_my_ai(ai);
-        int next_state = fsm(sub_state, myai) + mode * 100;
+        int next_state = fsm(mode, sub_state, myai) + mode * 100;
         ai->st.state = next_state;
     }
-
 }
 
 /**********************************************************************************
@@ -413,52 +414,108 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
  there.
 **********************************************************************************/
 
-int fsm(int state, struct RoboAI *ai)
+int fsm(int mode, int state, struct RoboAI *ai)
 {
-    update_kick_pos(ai);
+    int fake_state = 0;
+    if (find_ball(&fake_state, ai))
+    {
+        update_kick_pos(ai);
+    }
     switch (state)
     {
-    case START:
-        at_kick_pos(&state, ai);
-        break;
-    case KICK_RIGHT:
-        break;
-    case KICK_LEFT:
-        break;
-    case CHASE:
-        chase_left_or_right(&state, ai);
-        break;
-    case CHASE_TO_LEFT:
-    case CHASE_TO_RIGHT:
-        if (!at_kick_pos(&state, ai))
-        {
-            chase_left_or_right(&state, ai);
-        }
-        break;
+        case START:
+            if (mode == MODE_PENALTY)
+            {
+                if (find_ball(&state, ai))
+                {
+                    if (!at_kick_pos(&state, ai))
+                    {
+                        chase_left_or_right(&state, ai);
+                    }
+                }
+            }
+            break;
+        case KICK_RIGHT:
+        case KICK_LEFT:
+            if (mode == MODE_PENALTY)
+            {
+                if (find_ball(&state, ai))
+                {
+                    if (!at_kick_pos(&state, ai) || kick_miss())
+                    {
+                        chase_left_or_right(&state, ai);
+                    }
+                    else
+                    {
+                        //TODO if kicked -> stop_kicker();, else keep kicking
+                    }
+                }
+                else
+                {
+                    stop_kicker();
+                }
+            }
+            break;
+        case CHASE_TO_LEFT:
+        case CHASE_TO_RIGHT:
+            if (mode == MODE_PENALTY)
+            {
+                if (find_ball(&state, ai))
+                {
+                    if (!at_kick_pos(&state, ai))
+                    {
+                        chase_left_or_right(&state, ai);
+                    }
+                }
+            }
+            break;
     }
 
     switch (state)
     {
-    case START:
-    case KICK_RIGHT:
-        kick_speed(KICK_SPEED);
-        sleep(1);
-        stop_kicker();
-        break;
-    case KICK_LEFT:
-        kick_speed(-KICK_SPEED);
-        sleep(1);
-        stop_kicker();
-        break;
-    case CHASE_TO_LEFT:
-        chase(ai, left_pos);
-        break;
-    case CHASE_TO_RIGHT:
-        chase(ai, right_pos);
-        break;
+        case START:
+            stop_kicker();
+            all_stop();
+            break;
+        case KICK_RIGHT:
+            kick_speed(KICK_SPEED);
+            sleep(1);
+            stop_kicker();
+            break;
+        case KICK_LEFT:
+            kick_speed(-KICK_SPEED);
+            sleep(1);
+            stop_kicker();
+            break;
+        case CHASE_TO_LEFT:
+            chase(ai, left_pos);
+            break;
+        case CHASE_TO_RIGHT:
+            chase(ai, right_pos);
+            break;
     }
     // fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
     return state;
+}
+
+bool kick_miss()
+{
+    //TODO
+    return false;
+}
+
+bool find_ball(int *state, struct RoboAI *ai)
+{
+    //TODO need to check something else
+    if (ai->st.ball)
+    {
+        return true;
+    }
+    else
+    {   
+        *state = START;
+        return false;
+    }
 }
 
 bool reachable(double x, double y)
@@ -473,20 +530,16 @@ void chase_left_or_right(int *state, struct RoboAI *ai)
     double sy = ai->st.self->cy[0];
     double left_dist = pow(sx - left_pos[0], 2) + pow(sy - left_pos[1], 2);
     double right_dist = pow(sx - right_pos[0], 2) + pow(sy - right_pos[1], 2);
-    printf("diff: %f     %d\n", left_dist - right_dist, reachable(left_pos[0], left_pos[1]));
+    // printf("diff: %f     %d\n", left_dist - right_dist, reachable(left_pos[0], left_pos[1]));
     if (left_dist < right_dist && reachable(left_pos[0], left_pos[1]))
     {
         *state = CHASE_TO_LEFT;
-        fprintf(stderr, "left is closer!!!!!!!!!!!!!!!!!!\n");
+        // fprintf(stderr, "left is closer!!!!!!!!!!!!!!!!!!\n");
     }
     else if (left_dist >= right_dist && reachable(right_pos[0], right_pos[1]))
     {
         *state = CHASE_TO_RIGHT;
-        fprintf(stderr, "right is closer!!!!!!!!!!!!!!!!!!\n");
-    }
-    else
-    {
-        at_kick_pos(state, ai);
+        // fprintf(stderr, "right is closer!!!!!!!!!!!!!!!!!!\n");
     }
 }
 void init_my_ai()
@@ -638,7 +691,6 @@ bool at_kick_pos(int *state, struct RoboAI *ai)
     }
     else
     {
-        *state = CHASE;
         return false;
     }
 
