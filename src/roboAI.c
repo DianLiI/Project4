@@ -35,18 +35,21 @@
 #include <stdlib.h>
 
 #define ANGLE_TOL 0.0
-#define POSITION_TOL 70
+#define POSITION_TOL 0.05
 #define PI 3.14159265359
 #define MOVE_SPEED 50
 #define KICK_SPEED 100
-#define KICKER_LENGTH 150//0.15// 75 
+#define KICKER_LENGTH 0.15// 75 
 #define BOT_HIGHT 0.2
 #define BALL_HIGHT 0.03
 #define OPP_HIGHT 0.15
-#define FIELD_LENGTH 1.4
-#define FIELD_WIDTH 0.8
-#define CAM_DISTANCE 0.2
-#define CAM_HIGHT 1.3
+#define FIELD_LENGTH 0.9//1.4
+#define FIELD_WIDTH 0.6//0.8
+#define CAM_DISTANCE 0.35//0.2
+#define CAM_OFF_MID 0.0
+#define CAM_HIGHT 0.75//1.3
+#define SCREEN_WIDTH 1024
+#define SCREEN_HIGHT 768
 /*states*/
 #define MODE_SOCCER 0
 #define MODE_PENALTY 1
@@ -62,6 +65,8 @@ int direction = 1;
 double left_pos[2];
 double right_pos[2];
 struct RoboAI *myai;
+double cam_pos[] = {FIELD_LENGTH/2 + CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
+
 void clear_motion_flags(struct RoboAI *ai)
 {
     // Reset all motion flags. See roboAI.h for what each flag represents
@@ -452,13 +457,14 @@ int fsm(int state, struct RoboAI *ai)
         chase(ai, right_pos);
         break;
     }
-    fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
+    // fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
     return state;
 }
 
 bool reachable(double x, double y)
 {
-    return (x > KICKER_LENGTH && x < 1024.0 - KICKER_LENGTH) && (-y > KICKER_LENGTH && -y < 768 - KICKER_LENGTH);
+    //TODO except in front of gate
+    return (x > KICKER_LENGTH && x < FIELD_LENGTH - KICKER_LENGTH) && (-y > KICKER_LENGTH && -y < FIELD_WIDTH - KICKER_LENGTH);
 }
 
 void chase_left_or_right(int *state, struct RoboAI *ai)
@@ -526,7 +532,24 @@ void init_blob(struct blob *myblob)
         myblob->vy[i] = 0;
     }
 }
-void update_blob(struct blob *myblob, struct blob *p)
+
+void update_pos(struct blob *myblob, struct blob *p, double height)
+{
+    double projx = p->cx[0] / SCREEN_WIDTH * FIELD_LENGTH;
+    double projy =-p->cy[0] / SCREEN_HIGHT * FIELD_WIDTH;
+    double vectorx= cam_pos[0] - projx;
+    double vectory= cam_pos[1] - projy;
+    double length1 = sqrt(pow(vectorx,2)+pow(vectory,2));
+    double length2 = length1 / CAM_HIGHT * height;
+    // fprintf(stderr, "cam_pos[0]  %f projx %f, cam_pos[1] %f projy %f length1 %f length2 %f", cam_pos[0] ,projx , cam_pos[1] , projy , length1 , length2);
+    double ratio = length2 / length1;
+    myblob->cx[0] = projx + vectorx * ratio;
+    myblob->cy[0] = projy + vectory * ratio;
+    // fprintf(stderr, "height %f  myblob->cx[0] %f, myblob->cy[0] %f vectorx %f vectory %f\n", height, myblob->cx[0], myblob->cy[0], vectorx, vectory);
+}
+
+
+void update_blob(struct blob *myblob, struct blob *p, double height)
 {
     double len;
     double timediff;
@@ -539,8 +562,7 @@ void update_blob(struct blob *myblob, struct blob *p)
         myblob->vx[i + 1] = myblob->vx[i];
         myblob->vy[i + 1] = myblob->vy[i];
     }
-    myblob->cx[0] = p->cx[0];
-    myblob->cy[0] = -p->cy[0];
+    update_pos(myblob, p, height);
     timediff = getTimeDiff();
     //timediff = (p->cx[0] - p->cx[1]) / ((p->vx[0] - ((.25 * p->vx[1]) + (.125 * p->vx[2]) + (.0625 * p->vx[3]) + (.0625 * p->vx[4]))) / 0.5);
     // Instantaneous velocity vector in pixels/second
@@ -550,7 +572,7 @@ void update_blob(struct blob *myblob, struct blob *p)
     // Smoothed velocity vector
     myblob->vx[0] = (.5 * myblob->vx[0]) + (.25 * myblob->vx[1]) + (.125 * myblob->vx[2]) + (.0625 * myblob->vx[3]) + (.0625 * myblob->vx[4]);
     myblob->vy[0] = (.5 * myblob->vy[0]) + (.25 * myblob->vy[1]) + (.125 * myblob->vy[2]) + (.0625 * myblob->vy[3]) + (.0625 * myblob->vy[4]);
-    fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
+    //fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
     // If the current motion vector is meaningful (x or y component more than 1 pixel/frame) update
     // blob heading as a unit vector.
     if ((myblob->vx[0] > noiseV || myblob->vx[0] < -noiseV) && (myblob->vy[0] > noiseV || myblob->vy[0] < -noiseV))
@@ -570,23 +592,23 @@ void update_my_ai(struct RoboAI *ai)
     myai->st.state = ai->st.state;
     if (ai->st.ball)
     {
-        update_blob(myai->st.ball, ai->st.ball);
+        update_blob(myai->st.ball, ai->st.ball, BALL_HIGHT);
     }
     if (ai->st.self)
     {
-        update_blob(myai->st.self, ai->st.self);
+        update_blob(myai->st.self, ai->st.self, BOT_HIGHT);
     }
     if (ai->st.opp)
     {
-        update_blob(myai->st.opp, ai->st.opp);
+        update_blob(myai->st.opp, ai->st.opp, OPP_HIGHT);
     }
 
 }
 
 void update_kick_pos(struct RoboAI *ai)
 {
-    double gy = -768.0 / 2.0;
-    double gx = (1 - ai->st.side) * 1024.0;
+    double gy = -FIELD_WIDTH / 2.0;
+    double gx = (1 - ai->st.side) * FIELD_LENGTH;
     double bx = ai->st.ball->cx[0];
     double by = ai->st.ball->cy[0];
     double ball_to_gate[2] = {gx - bx, gy - by};
@@ -644,7 +666,7 @@ void apply_power(int left_power, int right_power)
     {
         drive_custom(-right_power, -left_power);
     }
-    fprintf(stderr, "left: %d right: %d", left_power, right_power);
+    //fprintf(stderr, "left: %d right: %d", left_power, right_power);
     // sleep(0.1);
     // all_stop();
     // sleep(5);
@@ -702,7 +724,7 @@ void chase(struct RoboAI *ai, double *pos)
     // }
     //fprintf(stderr, "Robot: Current position: (%f,%f), current heading: %f, AI state=%d\n", ai->st.self->cx[0], ai->st.self->cy[0], atan2(ai->st.self->mx, ai->st.self->my), ai->st.state);
     //fprintf(stderr, "Ball: Current position: (%f,%f), current heading: [%f, %f], AI state=%d\n", ai->st.ball->cx[0], ai->st.ball->cy[0], ai->st.ball->mx, ai->st.ball->my, ai->st.state);
-    fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
+    //fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
     //fprintf(stderr, "H: [%f, %f], D: [%f, %f]\n", h[0], h[1], d[0], d[1]);
     move(theta);
 }

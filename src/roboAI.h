@@ -141,6 +141,7 @@ void update_kick_pos();
 bool at_kick_pos(int *state, struct RoboAI *ai);
 void init_my_ai();
 void init_blob(struct blob *myblob);
-void update_blob(struct blob *myblob, struct blob *b);
+void update_pos(struct blob *myblob, struct blob *p, double height);
+void update_blob(struct blob *myblob, struct blob *b, double height);
 void update_my_ai(struct RoboAI *ai);
 #endif
