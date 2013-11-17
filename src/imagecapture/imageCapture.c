@@ -71,7 +71,7 @@ int doAI=0;			// Toggle switch for AI processing
 int printFPS=0;			// Flag that controls FPS printout
 int AIMode = 0;			// AI mode, as per command line
 int botCol = 0;			// Own bot's colour as per command line
-
+double diff;
 /*********************************************************************
  OpenGL display setup.
 *********************************************************************/
@@ -765,7 +765,7 @@ void blobTrack(struct blob **tracked, struct blob *current)
  blob_time2=clock();
  timediff=(double)(blob_time2-blob_time1)/CLOCKS_PER_SEC;
  blob_time1=blob_time2;
-
+ diff = timediff;
  bcount=0;
  p=*(tracked);
  while (p!=NULL) {p->updated=0; p=p->next; bcount++;}
@@ -1444,5 +1444,9 @@ int imageCaptureStartup(char *devName, int rx, int ry, int own_col, int AI_mode)
  glutMainLoop();
 
  return 0;
+}
+
+double getTimeDiff(){
+  return diff;
 }
 

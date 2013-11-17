@@ -107,6 +107,6 @@ void blobTrack(struct blob **tracked, struct blob *current);
 void drawLine(int x1, int y1, double vx, double vy, double scale, double R, double G, double B, struct image *dst);
 void drawBox(int x1, int y1, int x2, int y2, double R, double G, double B, struct image *dst);
 void drawCross(int mcx, int mcy, double R, double G, double B, int len, struct image *dst);
-
+double getTimeDiff();
 #endif
 
