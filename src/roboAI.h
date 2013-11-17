@@ -146,4 +146,5 @@ void update_blob(struct blob *myblob, struct blob *b, double height);
 void update_my_ai(struct RoboAI *ai);
 bool kick_miss();
 bool find_ball(int *state, struct RoboAI *ai);
+bool pushable(double x, double y);
 #endif
