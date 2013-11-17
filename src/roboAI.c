@@ -35,19 +35,19 @@
 #include <stdlib.h>
 
 #define ANGLE_TOL 0.0
-#define POSITION_TOL 2
 #define PI 3.14159265359
 #define MOVE_SPEED 25
 #define KICK_SPEED 100
-#define KICKER_LENGTH 14// 75 
-#define BOT_HIGHT 20
-#define BALL_HIGHT 3
-#define OPP_HIGHT 15
-#define FIELD_LENGTH 120//1.4
-#define FIELD_WIDTH 90//0.8
-#define CAM_DISTANCE 20//0.2
+#define POSITION_TOL 20
+#define KICKER_LENGTH 140// 75 
+#define BOT_HIGHT 200
+#define BALL_HIGHT 30
+#define OPP_HIGHT 150
+#define FIELD_LENGTH 1200//1.4
+#define FIELD_WIDTH 900//0.8
+#define CAM_DISTANCE 200//0.2
 #define CAM_OFF_MID 0.0
-#define CAM_HIGHT 125//1.3
+#define CAM_HIGHT 1250//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -62,15 +62,17 @@
 #define CHASE_TO_RIGHT 6
 #define PUSH 7
 
-
+//need to reset
 int direction = 1;
+bool kicking = false;
+double total_time = 0.0;
+
 double left_pos[2];
 double right_pos[2];
 double push_pos[2];
 struct RoboAI *myai;
 double cam_pos[] = {FIELD_LENGTH/2 + CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
-bool kicking = false;
-double total_time = 0.0;
+
 
 void clear_motion_flags(struct RoboAI *ai)
 {
@@ -432,12 +434,27 @@ int fsm(int mode, int state, struct RoboAI *ai)
             {
                 if (find_ball(&state, ai))
                 {
-                    if (!at_kick_pos(&state, ai))
-                    {
-                        chase_lr_or_push(&state, ai);
-                    }
+                    chase_lr_or_push(&state, ai);
+                    at_kick_pos(&state, ai);
                 }
             }
+            else if (mode == MODE_CHASE)
+            {
+                if (find_ball(&state, ai))
+                {
+                    chase_lr_or_push(&state, ai);
+                } 
+            }
+            break;
+        case FINISH:
+            if (mode == MODE_PENALTY)
+            {
+                //do nothing 
+            }
+            else if (mode == MODE_CHASE)
+            {
+                state = START;
+            }   
             break;
         case KICK_RIGHT:
         case KICK_LEFT:
@@ -445,19 +462,24 @@ int fsm(int mode, int state, struct RoboAI *ai)
             {
                 if (find_ball(&state, ai))
                 {
-                    if (!at_kick_pos(&state, ai) || kick_miss())
-                    {
-                        chase_lr_or_push(&state, ai);
-                    }
-                    else
+                    chase_lr_or_push(&state, ai);
+                    at_kick_pos(&state, ai);
+                    if (!kick_miss())
                     {
                         kick_finished(&state);
                     }
                 }
-                else
+                // else
+                // {
+                //     stop_kicker(&state);
+                // }
+            }
+            else if (mode == MODE_CHASE)
+            {
+                if (find_ball(&state, ai))
                 {
-                    stop_kicker();
-                }
+                    chase_lr_or_push(&state, ai);
+                } 
             }
             break;
         case CHASE_TO_LEFT:
@@ -467,11 +489,16 @@ int fsm(int mode, int state, struct RoboAI *ai)
             {
                 if (find_ball(&state, ai))
                 {
-                    if (!at_kick_pos(&state, ai))
-                    {
-                        chase_lr_or_push(&state, ai);
-                    }
+                    chase_lr_or_push(&state, ai);
+                    at_kick_pos(&state, ai);
                 }
+            }
+            else if (mode == MODE_CHASE)
+            {
+                if (find_ball(&state, ai))
+                {
+                    chase_lr_or_push(&state, ai);
+                } 
             }
             break;
     }
@@ -480,14 +507,19 @@ int fsm(int mode, int state, struct RoboAI *ai)
     {
         case START:
         case FINISH:
+            direction = 1;
+            // kicking = false;
+            // total_time = 0.0;
             stop_kicker();
             all_stop();
             break;
         case KICK_RIGHT:
             my_kick(KICK_SPEED);
+            chase(ai, right_pos);
             break;
         case KICK_LEFT:
             my_kick(-KICK_SPEED);
+            chase(ai, left_pos);
             break;
         case CHASE_TO_LEFT:
             chase(ai, left_pos);
@@ -503,9 +535,15 @@ int fsm(int mode, int state, struct RoboAI *ai)
     return state;
 }
 
-bool kick_miss()
+bool kick_miss(int *state)
 {
     //TODO
+    bool miss = false;
+    if (miss)
+    {
+        *state = START;
+        return true;
+    }
     return false;
 }
 
@@ -801,6 +839,20 @@ void move(double theta)
 
     apply_power(my_round(left_power), my_round(right_power));
 }
+
+void reverse_dir(struct blob *b)
+{
+    int i;
+    direction = -direction;
+    b->mx *= -1.0;
+    b->my *= -1.0;
+    for (i = 0; i < 5; i++)
+    {
+        b->vx[i] = 0.0;
+        b->vy[i] = 0.0;
+    }
+}
+
 void chase(struct RoboAI *ai, double *pos)
 {
     // ball position
@@ -821,16 +873,12 @@ void chase(struct RoboAI *ai, double *pos)
     if (theta > PI / 2.0)
     {
         theta = theta - PI;
-        direction = -direction;
-        ai->st.self->mx *= -1.0;
-        ai->st.self->my *= -1.0;
+        reverse_dir(ai->st.self);
     }
     else if (theta < -(PI / 2.0))
     {
         theta = theta + PI;
-        direction = -direction;
-        ai->st.self->mx *= -1.0;
-        ai->st.self->my *= -1.0;
+        reverse_dir(ai->st.self);
     }
     //fprintf(stderr, "Robot: Current position: (%f,%f), current heading: %f, AI state=%d\n", ai->st.self->cx[0], ai->st.self->cy[0], atan2(ai->st.self->mx, ai->st.self->my), ai->st.state);
     //fprintf(stderr, "Ball: Current position: (%f,%f), current heading: [%f, %f], AI state=%d\n", ai->st.ball->cx[0], ai->st.ball->cy[0], ai->st.ball->mx, ai->st.ball->my, ai->st.state);
