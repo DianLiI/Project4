@@ -136,7 +136,7 @@ void chase(struct RoboAI *ai, double *pos);
 void apply_power(int left_power, int right_power);
 int fsm(int mode, int state, struct RoboAI *ai);
 bool reachable(double x, double y);
-void chase_left_or_right(int *state, struct RoboAI *ai);
+void chase_lr_or_push(int *state, struct RoboAI *ai);
 void update_kick_pos();
 bool at_kick_pos(int *state, struct RoboAI *ai);
 void init_my_ai();
@@ -147,4 +147,5 @@ void update_my_ai(struct RoboAI *ai);
 bool kick_miss();
 bool find_ball(int *state, struct RoboAI *ai);
 bool pushable(double x, double y);
+void update_push_pos(struct RoboAI *ai);
 #endif
