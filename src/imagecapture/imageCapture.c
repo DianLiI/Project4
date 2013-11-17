@@ -113,6 +113,19 @@ void kbHandler(unsigned char key, int x, int y)
  if (key=='r') {setupAI(AIMode,botCol,&skynet); doAI=0;}		// Resets the state of the AI (may need full reset)
 
  // Controls for recording the corners of the playing field
+ if (key =='z')
+ {
+   Mcorners[0][0]=205.0;
+   Mcorners[0][1]=25.0;
+   Mcorners[1][0]=1010.0;
+   Mcorners[1][1]=50.0;
+   Mcorners[2][0]=1150.0;
+   Mcorners[2][1]=680.0;
+   Mcorners[3][0]=33.0;
+   Mcorners[3][1]=665.0;
+   cornerIdx = 4;
+   toggleProc=0;
+ }
  if (key=='m')
  {
   if (toggleProc==1) toggleProc=0;
@@ -154,6 +167,8 @@ void kbHandler(unsigned char key, int x, int y)
  if (key=='l') {if (DIR_R==0) {DIR_R=1; DIR_L=0; DIR_FWD=0; DIR_BACK=0; pivot_right_speed(50);} else {DIR_R=0; all_stop();}}
  if (key=='k') {if (DIR_BACK==0) {DIR_BACK=1; DIR_L=0; DIR_R=0; DIR_FWD=0; reverse_speed(75);} else {DIR_BACK=0; all_stop();}}
  if (key=='o') {all_stop();doAI=0;}	// <-- Important!
+ if (key=='u') {kick_speed(100);}
+ if (key=='y') {kick_speed(-100);}
 }
 
 void WindowReshape(int w, int h)
@@ -1264,8 +1279,8 @@ void FrameGrabLoop(void)
     H=getH();
 
     // Turn off auto exposure and auto white-balance
-    v4l2SetControl(webcam, V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_MANUAL);
-    v4l2SetControl(webcam, V4L2_CID_AUTO_WHITE_BALANCE, 0);
+    // v4l2SetControl(webcam, V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_MANUAL);
+    // v4l2SetControl(webcam, V4L2_CID_AUTO_WHITE_BALANCE, 0);
 
     // Get background image
     t2=newImage(t3->sx,t3->sy,3);

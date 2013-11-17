@@ -35,19 +35,19 @@
 #include <stdlib.h>
 
 #define ANGLE_TOL 0.0
-#define POSITION_TOL 0.05
+#define POSITION_TOL 2
 #define PI 3.14159265359
-#define MOVE_SPEED 50
+#define MOVE_SPEED 25
 #define KICK_SPEED 100
-#define KICKER_LENGTH 0.15// 75 
-#define BOT_HIGHT 0.2
-#define BALL_HIGHT 0.03
-#define OPP_HIGHT 0.15
-#define FIELD_LENGTH 0.9//1.4
-#define FIELD_WIDTH 0.6//0.8
-#define CAM_DISTANCE 0.35//0.2
+#define KICKER_LENGTH 14// 75 
+#define BOT_HIGHT 20
+#define BALL_HIGHT 3
+#define OPP_HIGHT 15
+#define FIELD_LENGTH 120//1.4
+#define FIELD_WIDTH 90//0.8
+#define CAM_DISTANCE 20//0.2
 #define CAM_OFF_MID 0.0
-#define CAM_HIGHT 0.75//1.3
+#define CAM_HIGHT 125//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -502,7 +502,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
             chase(ai, push_pos);
             break;
     }
-    // fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
+    //fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
     return state;
 }
 
@@ -559,17 +559,17 @@ void chase_lr_or_push(int *state, struct RoboAI *ai)
         *state = PUSH;
     }
 }
-void init_my_ai()
+void init_my_ai(struct RoboAI *ai)
 {
     myai = malloc(sizeof(struct RoboAI));
-    myai->st.state = 0;
+    myai->st.state = ai->st.state;
     myai->st.ball = malloc(sizeof(struct blob));
     myai->st.self = malloc(sizeof(struct blob));
     myai->st.opp = malloc(sizeof(struct blob));
-    init_blob(myai->st.ball);
-    init_blob(myai->st.self);
-    init_blob(myai->st.opp);
-    myai->st.side = 0;
+    init_blob(myai->st.ball, ai->st.ball, BALL_HIGHT);
+    init_blob(myai->st.self, ai->st.self, BOT_HIGHT);
+    init_blob(myai->st.opp, ai->st.opp, OPP_HIGHT);
+    myai->st.side = ai->st.side;
     myai->st.old_bcx = 0;
     myai->st.old_bcy = 0;
     myai->st.old_scx = 0;
@@ -587,26 +587,38 @@ void init_my_ai()
     myai->st.ballID = 0;
 }
 
-void init_blob(struct blob *myblob)
+void init_blob(struct blob *myblob, struct blob *p, double height)
 {
     int i;
     // myblob->cx = malloc(sizeof(double));
     // myblob->cy = malloc(sizeof(double));
     // myblob->vx = malloc(sizeof(double));
     // myblob->vy = malloc(sizeof(double));
+    if (!p)
+    {
+        return;
+    }
     for (i = 0; i < 5; i++)
     {
-        myblob->cx[i] = 0;
-        myblob->cy[i] = 0;
-        myblob->vx[i] = 0;
-        myblob->vy[i] = 0;
+        double projx = p->cx[i] / SCREEN_WIDTH * FIELD_LENGTH;
+        double projy =-p->cy[i] / SCREEN_HIGHT * FIELD_WIDTH;
+        double vectorx= cam_pos[0] - projx;
+        double vectory= cam_pos[1] - projy;
+        double length1 = sqrt(pow(vectorx,2)+pow(vectory,2));
+        double length2 = length1 / CAM_HIGHT * height;
+        // fprintf(stderr, "cam_pos[0]  %f projx %f, cam_pos[1] %f projy %f length1 %f length2 %f", cam_pos[0] ,projx , cam_pos[1] , projy , length1 , length2);
+        double ratio = length2 / length1;
+        myblob->cx[i] = projx + vectorx * ratio;
+        myblob->cy[i] = projy + vectory * ratio;
+        myblob->vx[i] = p->vx[i] / 10;
+        myblob->vy[i] = -(p->vy[i]) / 10;
     }
 }
 
 void update_pos(struct blob *myblob, struct blob *p, double height)
 {
     double projx = p->cx[0] / SCREEN_WIDTH * FIELD_LENGTH;
-    double projy =-p->cy[0] / SCREEN_HIGHT * FIELD_WIDTH;
+    double projy =-(p->cy[0]) / SCREEN_HIGHT * FIELD_WIDTH;
     double vectorx= cam_pos[0] - projx;
     double vectory= cam_pos[1] - projy;
     double length1 = sqrt(pow(vectorx,2)+pow(vectory,2));
@@ -615,7 +627,7 @@ void update_pos(struct blob *myblob, struct blob *p, double height)
     double ratio = length2 / length1;
     myblob->cx[0] = projx + vectorx * ratio;
     myblob->cy[0] = projy + vectory * ratio;
-    // fprintf(stderr, "height %f  myblob->cx[0] %f, myblob->cy[0] %f vectorx %f vectory %f\n", height, myblob->cx[0], myblob->cy[0], vectorx, vectory);
+    //fprintf(stderr, "height %f  myblob->cx[0] %f, myblob->cy[0] %f vectorx %f vectory %f\n", height, myblob->cx[0], myblob->cy[0], vectorx, vectory);
 }
 
 
@@ -624,7 +636,7 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     double len;
     double timediff;
     int i;
-    double noiseV = 15.0;   // Was 5.0
+    double noiseV =  0.2;// Was 5.0
     for (i = 3; i >= 0; i--)
     {
         myblob->cx[i + 1] = myblob->cx[i];
@@ -645,7 +657,7 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     //fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
     // If the current motion vector is meaningful (x or y component more than 1 pixel/frame) update
     // blob heading as a unit vector.
-    if ((myblob->vx[0] > noiseV || myblob->vx[0] < -noiseV) && (myblob->vy[0] > noiseV || myblob->vy[0] < -noiseV))
+    if (fabs(myblob->vx[0]) > noiseV && fabs(myblob->vy[0]) > noiseV)
     {
         len = 1.0 / sqrt((myblob->vx[0] * myblob->vx[0]) + (myblob->vy[0] * myblob->vy[0]));
         myblob->mx = myblob->vx[0] * len;
@@ -755,12 +767,12 @@ void move(double theta)
     if (theta >= ANGLE_TOL)
     {
         left_power = MOVE_SPEED;
-        right_power = cos(theta ) * MOVE_SPEED;
+        right_power = cos(theta * 2.0) * MOVE_SPEED;
     }
     else if (theta <= -ANGLE_TOL)
     {
         right_power = MOVE_SPEED;
-        left_power = cos(theta ) * MOVE_SPEED;
+        left_power = cos(theta * 2.0) * MOVE_SPEED;
     }
     else
     {
@@ -787,16 +799,20 @@ void chase(struct RoboAI *ai, double *pos)
     double th = atan2(h[0], h[1]);
     // theta between two vectors
     double theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
-    // if (theta > PI / 2.0)
-    // {
-    //     theta = theta - PI;
-    //     direction = -direction;
-    // }
-    // else if (theta < -(PI / 2.0))
-    // {
-    //     theta = theta + PI;
-    //     direction = -direction;
-    // }
+    if (theta > PI / 2.0)
+    {
+        theta = theta - PI;
+        direction = -direction;
+        ai->st.self->mx *= -1.0;
+        ai->st.self->my *= -1.0;
+    }
+    else if (theta < -(PI / 2.0))
+    {
+        theta = theta + PI;
+        direction = -direction;
+        ai->st.self->mx *= -1.0;
+        ai->st.self->my *= -1.0;
+    }
     //fprintf(stderr, "Robot: Current position: (%f,%f), current heading: %f, AI state=%d\n", ai->st.self->cx[0], ai->st.self->cy[0], atan2(ai->st.self->mx, ai->st.self->my), ai->st.state);
     //fprintf(stderr, "Ball: Current position: (%f,%f), current heading: [%f, %f], AI state=%d\n", ai->st.ball->cx[0], ai->st.ball->cy[0], ai->st.ball->mx, ai->st.ball->my, ai->st.state);
     //fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
