@@ -36,7 +36,7 @@
 
 #define ANGLE_TOL 0.0
 #define PI 3.14159265359
-#define MOVE_SPEED 25
+#define MOVE_SPEED 60
 #define KICK_SPEED 100
 #define POSITION_TOL 20
 #define KICKER_LENGTH 140// 75 
@@ -66,6 +66,7 @@
 int direction = 1;
 bool kicking = false;
 double total_time = 0.0;
+double dir_time = 0.0;
 
 double left_pos[2];
 double right_pos[2];
@@ -401,6 +402,10 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
         int sub_state = ai->st.state % 100;
         update_my_ai(ai);
         int next_state = fsm(mode, sub_state, myai) + mode * 100;
+        if (dir_time < 2)
+        {
+            dir_time += getTimeDiff();
+        }
         ai->st.state = next_state;
     }
 }
@@ -462,8 +467,13 @@ int fsm(int mode, int state, struct RoboAI *ai)
             {
                 if (find_ball(&state, ai))
                 {
+                    int temp = state;
                     chase_lr_or_push(&state, ai);
                     at_kick_pos(&state, ai);
+                    if (kicking)
+                    {
+                        state = temp;
+                    }
                     if (!kick_miss())
                     {
                         kick_finished(&state);
@@ -843,13 +853,17 @@ void move(double theta)
 void reverse_dir(struct blob *b)
 {
     int i;
-    direction = -direction;
-    b->mx *= -1.0;
-    b->my *= -1.0;
-    for (i = 0; i < 5; i++)
+    if (dir_time > 1.0)
     {
-        b->vx[i] = 0.0;
-        b->vy[i] = 0.0;
+        direction = -direction;
+        b->mx *= -1.0;
+        b->my *= -1.0;
+        for (i = 0; i < 5; i++)
+        {
+            b->vx[i] = 0.0;
+            b->vy[i] = 0.0;
+        }
+        dir_time = 0.0;   
     }
 }
 
