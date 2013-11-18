@@ -45,7 +45,7 @@
 #define OPP_HIGHT 150
 #define FIELD_LENGTH 1200//1.4
 #define FIELD_WIDTH 900//0.8
-#define CAM_DISTANCE 200//0.2
+#define CAM_DISTANCE 230//0.2
 #define CAM_OFF_MID 0.0
 #define CAM_HIGHT 1250//1.3
 #define SCREEN_WIDTH 1024
@@ -507,9 +507,6 @@ int fsm(int mode, int state, struct RoboAI *ai)
     {
         case START:
         case FINISH:
-            direction = 1;
-            // kicking = false;
-            // total_time = 0.0;
             stop_kicker();
             all_stop();
             break;
@@ -642,6 +639,9 @@ void init_my_ai(struct RoboAI *ai)
     myai->st.selfID = 0;
     myai->st.oppID = 0;
     myai->st.ballID = 0;
+    direction = 1;
+// kicking = false;
+// total_time = 0.0;
 }
 
 void init_blob(struct blob *myblob, struct blob *p, double height)
