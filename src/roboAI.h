@@ -148,4 +148,6 @@ bool kick_miss();
 bool find_ball(int *state, struct RoboAI *ai);
 bool pushable(double x, double y);
 void update_push_pos(struct RoboAI *ai);
+void my_kick(int speed);
+bool kick_finished(int *state);
 #endif

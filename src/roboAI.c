@@ -70,6 +70,7 @@ double push_pos[2];
 struct RoboAI *myai;
 double cam_pos[] = {FIELD_LENGTH/2 + CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
 bool kicking = false;
+double total_time = 0.0;
 
 void clear_motion_flags(struct RoboAI *ai)
 {
@@ -450,7 +451,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
                     }
                     else
                     {
-                        //TODO if kicked -> stop_kicker();, else keep kicking
+                        kick_finished(&state);
                     }
                 }
                 else
@@ -483,14 +484,10 @@ int fsm(int mode, int state, struct RoboAI *ai)
             all_stop();
             break;
         case KICK_RIGHT:
-            kick_speed(KICK_SPEED);
-            sleep(1);
-            stop_kicker();
+            my_kick(KICK_SPEED);
             break;
         case KICK_LEFT:
-            kick_speed(-KICK_SPEED);
-            sleep(1);
-            stop_kicker();
+            my_kick(-KICK_SPEED);
             break;
         case CHASE_TO_LEFT:
             chase(ai, left_pos);
@@ -510,6 +507,28 @@ bool kick_miss()
 {
     //TODO
     return false;
+}
+
+bool kick_finished(int *state)
+{
+    if (total_time > 0.45)
+    {
+        stop_kicker();
+        total_time = 0.0;
+        kicking = false;
+        *state = FINISH;
+        return true;
+    }
+    return false;
+}
+void my_kick(int speed)
+{
+    if (!kicking)
+    {
+        kicking = true;
+        kick_speed(speed);
+    }
+    total_time += getTimeDiff();
 }
 
 bool find_ball(int *state, struct RoboAI *ai)
