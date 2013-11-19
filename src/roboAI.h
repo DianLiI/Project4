@@ -131,7 +131,7 @@ void clear_motion_flags(struct RoboAI *ai);
    Add headers for your own functions implementing the bot's soccer
    playing functionality below.
 *****************************************************************************/
-void move(double theta);
+void move(double theta, struct RoboAI *ai);
 void chase(struct RoboAI *ai, double *pos);
 void apply_power(int left_power, int right_power);
 int fsm(int mode, int state, struct RoboAI *ai);

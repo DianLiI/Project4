@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ANGLE_TOL 0.0
+#define ANGLE_TOL 0.5
 #define PI 3.14159265359
 #define MOVE_SPEED 40
 #define KICK_SPEED 100
@@ -43,11 +43,11 @@
 #define BOT_HIGHT 200
 #define BALL_HIGHT 30
 #define OPP_HIGHT 150
-#define FIELD_LENGTH 1680//1.4
-#define FIELD_WIDTH 1470//0.8
-#define CAM_DISTANCE 460//0.2
+#define FIELD_LENGTH 1400//1.4
+#define FIELD_WIDTH 900//0.8
+#define CAM_DISTANCE 220//0.2
 #define CAM_OFF_MID 800
-#define CAM_HIGHT 2180//1.3
+#define CAM_HIGHT 1300//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -73,6 +73,8 @@ double right_pos[2];
 double push_pos[2];
 struct RoboAI *myai;
 double cam_pos[] = {CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
+
+int pre_l_power=0, pre_r_power=0;
 
 
 void clear_motion_flags(struct RoboAI *ai)
@@ -396,8 +398,9 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
          Your AI code needs to handle these states and their associated state
          transitions which will determine the robot's behaviour for each mode.
         *****************************************************************************/
-        // track_agents(ai,blobs);        // Currently, does nothing but endlessly track
+        track_agents(ai,blobs);        // Currently, does nothing but endlessly track
         // fprintf(stderr,"Just trackin'!\n");    // bot, opponent, and ball.
+
         int mode = ai->st.state / 100;
         int sub_state = ai->st.state % 100;
         update_my_ai(ai);
@@ -650,6 +653,7 @@ void init_my_ai(struct RoboAI *ai)
     myai->st.oppID = 0;
     myai->st.ballID = 0;
     direction = 1;
+
 // kicking = false;
 // total_time = 0.0;
 }
@@ -724,12 +728,25 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     //fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
     // If the current motion vector is meaningful (x or y component more than 1 pixel/frame) update
     // blob heading as a unit vector.
-    if (fabs(myblob->vx[0]) > noiseV && fabs(myblob->vy[0]) > noiseV)
+    if (pre_l_power * pre_r_power < 0)
+    {
+        double pre_heading = atan2(myblob->mx, myblob->my);
+        double theta;
+        theta = getTimeDiff() * (abs(pre_r_power) + abs(pre_l_power)) * PI / 100.0;
+        if (abs(pre_r_power) > abs(pre_l_power))   
+        {
+            theta *= -1.0;
+        }
+        myblob->mx = sin(pre_heading + theta);
+        myblob->my = cos(pre_heading + theta);
+    }
+    else if (fabs(myblob->vx[0]) > noiseV && fabs(myblob->vy[0]) > noiseV)
     {
         len = 1.0 / sqrt((myblob->vx[0] * myblob->vx[0]) + (myblob->vy[0] * myblob->vy[0]));
         myblob->mx = myblob->vx[0] * len;
         myblob->my = myblob->vy[0] * len;
     }
+
     // myblob->vx[0] = p->vx[0];
     // myblob->vy[0] = b->vy[0];
     // myblob->mx = b->mx;
@@ -812,6 +829,8 @@ int my_round(double number)
 }
 void apply_power(int left_power, int right_power)
 {
+    pre_r_power = right_power;
+    pre_l_power = left_power;
     if (direction > 0)
     {
         drive_custom(left_power, right_power);
@@ -827,7 +846,7 @@ void apply_power(int left_power, int right_power)
 
 }
 
-void move(double theta)
+void move(double theta, struct RoboAI *ai)
 {
     double left_power = 0.0;
     double right_power = 0.0;
@@ -843,8 +862,16 @@ void move(double theta)
     }
     else
     {
-        left_power = MOVE_SPEED;
-        right_power = MOVE_SPEED;
+        if (fabs(ai->st.self->cx[0] - ai->st.ball->cx[0]) > 300 || fabs(ai->st.self->cy[0] - ai->st.ball->cy[0]) > 300)
+        {
+            left_power = 100;
+            right_power = 100;
+        }
+        else
+        {
+            left_power = MOVE_SPEED;
+            right_power = MOVE_SPEED;
+        }
     }
 
     apply_power(my_round(left_power), my_round(right_power));
@@ -898,5 +925,5 @@ void chase(struct RoboAI *ai, double *pos)
     //fprintf(stderr, "Ball: Current position: (%f,%f), current heading: [%f, %f], AI state=%d\n", ai->st.ball->cx[0], ai->st.ball->cy[0], ai->st.ball->mx, ai->st.ball->my, ai->st.state);
     //fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
     //fprintf(stderr, "H: [%f, %f], D: [%f, %f]\n", h[0], h[1], d[0], d[1]);
-    move(theta);
+    move(theta, ai);
 }
