@@ -36,18 +36,18 @@
 
 #define ANGLE_TOL 0.0
 #define PI 3.14159265359
-#define MOVE_SPEED 60
+#define MOVE_SPEED 40
 #define KICK_SPEED 100
 #define POSITION_TOL 20
 #define KICKER_LENGTH 140// 75 
 #define BOT_HIGHT 200
 #define BALL_HIGHT 30
 #define OPP_HIGHT 150
-#define FIELD_LENGTH 1200//1.4
-#define FIELD_WIDTH 900//0.8
-#define CAM_DISTANCE 230//0.2
-#define CAM_OFF_MID 0.0
-#define CAM_HIGHT 1250//1.3
+#define FIELD_LENGTH 1680//1.4
+#define FIELD_WIDTH 1470//0.8
+#define CAM_DISTANCE 460//0.2
+#define CAM_OFF_MID 800
+#define CAM_HIGHT 2180//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -72,7 +72,7 @@ double left_pos[2];
 double right_pos[2];
 double push_pos[2];
 struct RoboAI *myai;
-double cam_pos[] = {FIELD_LENGTH/2 + CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
+double cam_pos[] = {CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
 
 
 void clear_motion_flags(struct RoboAI *ai)
