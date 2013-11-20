@@ -40,6 +40,7 @@
 #define KICK_SPEED 100
 #define POSITION_TOL 20
 #define KICKER_LENGTH 140// 75 
+#define OPPO_RADIUS 150  
 #define BOT_HIGHT 200
 #define BALL_HIGHT 30
 #define OPP_HIGHT 150
@@ -398,6 +399,9 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
          Your AI code needs to handle these states and their associated state
          transitions which will determine the robot's behaviour for each mode.
         *****************************************************************************/
+
+
+
         track_agents(ai,blobs);        // Currently, does nothing but endlessly track
         // fprintf(stderr,"Just trackin'!\n");    // bot, opponent, and ball.
 
@@ -610,21 +614,51 @@ void chase_lr_or_push(int *state, struct RoboAI *ai)
     double sy = ai->st.self->cy[0];
     double left_dist = pow(sx - left_pos[0], 2) + pow(sy - left_pos[1], 2);
     double right_dist = pow(sx - right_pos[0], 2) + pow(sy - right_pos[1], 2);
+    bool left_reach = reachable(left_pos[0], left_pos[1]);
+    bool right_reach = reachable(right_pos[0], right_pos[1]);
     // printf("diff: %f     %d\n", left_dist - right_dist, reachable(left_pos[0], left_pos[1]));
-    if (left_dist < right_dist && reachable(left_pos[0], left_pos[1]))
+    if (left_reach && right_reach)
+    {
+        if (left_dist < right_dist)
+        {
+            *state = CHASE_TO_LEFT;
+        }
+        else
+        {
+            *state = CHASE_TO_RIGHT;
+        }
+    }
+    else if (left_reach && !right_reach)
     {
         *state = CHASE_TO_LEFT;
-        // fprintf(stderr, "left is closer!!!!!!!!!!!!!!!!!!\n");
     }
-    else if (left_dist >= right_dist && reachable(right_pos[0], right_pos[1]))
+    else if (!left_reach && right_reach)
     {
         *state = CHASE_TO_RIGHT;
-        // fprintf(stderr, "right is closer!!!!!!!!!!!!!!!!!!\n");
     }
-    else if (pushable(right_pos[0], right_pos[1]))
+    else
     {
-        *state = PUSH;
+        if (pushable(push_pos[0], push_pos[1]))
+        {
+            *state = PUSH;
+        }
     }
+
+
+    // if (left_dist < right_dist && reachable(left_pos[0], left_pos[1]) && !left_block)
+    // {
+    //     *state = CHASE_TO_LEFT;
+    //     // fprintf(stderr, "left is closer!!!!!!!!!!!!!!!!!!\n");
+    // }
+    // else if (left_dist >= right_dist && reachable(right_pos[0], right_pos[1]) && !right_block)
+    // {
+    //     *state = CHASE_TO_RIGHT;
+    //     // fprintf(stderr, "right is closer!!!!!!!!!!!!!!!!!!\n");
+    // }
+    // else if (pushable(push_pos[0], push_pos[1]))
+    // {
+    //     *state = PUSH;
+    // }
 }
 void init_my_ai(struct RoboAI *ai)
 {
@@ -880,7 +914,7 @@ void move(double theta, struct RoboAI *ai)
 void reverse_dir(struct blob *b)
 {
     int i;
-    if (dir_time > 1.0)
+    if (dir_time > 1.5)
     {
         direction = -direction;
         b->mx *= -1.0;
@@ -892,6 +926,29 @@ void reverse_dir(struct blob *b)
         }
         dir_time = 0.0;   
     }
+}
+
+bool blocking(double *pos, struct RoboAI *ai)
+{
+    if (!ai->st.opp || !ai->st.ball || !ai->st.self)
+    {
+        return false;
+    }
+    double so[] = {ai->st.opp->cx[0] - ai->st.self->cx[0], ai->st.opp->cy[0] - ai->st.self->cy[0]};
+    double sp[] = {pos[0] - ai->st.self->cx[0], pos[1] - ai->st.self->cy[0]};
+    double product = so[0] * sp[0] + so[1] * sp[1];
+    if (product <= 0.0)
+    {
+        return false;
+    }
+    double norm_sp2 = sp[0] * sp[0] + sp[1] * sp[1];
+    double projection = (so[0] * sp[0] + so[1] * sp[1])/norm_sp2;
+    double intersect[] = {projection * sp[0] + ai->st.self->cx[0], projection * sp[1] + ai->st.self->cy[0]};
+    if (pow(ai->st.opp->cx[0] - intersect[0], 2) + pow(ai->st.opp->cy[0] - intersect[1], 2) > pow((KICKER_LENGTH + OPPO_RADIUS) * 1.2, 2))
+    {
+        return false;
+    }
+    return true;
 }
 
 void chase(struct RoboAI *ai, double *pos)
@@ -911,6 +968,23 @@ void chase(struct RoboAI *ai, double *pos)
     double th = atan2(h[0], h[1]);
     // theta between two vectors
     double theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
+
+    
+
+    if (ai->st.opp)
+    {
+        if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 3.0 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 3.0 * (KICKER_LENGTH + OPPO_RADIUS))
+        {
+            bool block = blocking(pos, ai);
+            if (block)
+            {
+                double leave_angle;
+                leave_angle = atan2(ai->st.self->cx[0] - ai->st.opp->cx[0], ai->st.self->cy[0] - ai->st.opp->cy[0]);
+                theta = atan2(sin(theta) + sin(leave_angle), cos(theta) + cos(leave_angle));
+            }
+        }
+    }
+
     if (theta > PI / 2.0)
     {
         theta = theta - PI;

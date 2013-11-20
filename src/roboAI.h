@@ -151,4 +151,5 @@ void update_push_pos(struct RoboAI *ai);
 void my_kick(int speed);
 bool kick_finished(int *state);
 void reverse_dir(struct blob *b);
+bool blocking(double *pos, struct RoboAI *ai);
 #endif
