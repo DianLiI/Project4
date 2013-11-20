@@ -932,6 +932,7 @@ bool blocking(double *pos, struct RoboAI *ai)
 {
     if (!ai->st.opp || !ai->st.ball || !ai->st.self)
     {
+        fprintf(stderr, "1111111111111\n");
         return false;
     }
     double so[] = {ai->st.opp->cx[0] - ai->st.self->cx[0], ai->st.opp->cy[0] - ai->st.self->cy[0]};
@@ -939,6 +940,7 @@ bool blocking(double *pos, struct RoboAI *ai)
     double product = so[0] * sp[0] + so[1] * sp[1];
     if (product <= 0.0)
     {
+        fprintf(stderr, "22222222222222\n");
         return false;
     }
     double norm_sp2 = sp[0] * sp[0] + sp[1] * sp[1];
@@ -946,6 +948,7 @@ bool blocking(double *pos, struct RoboAI *ai)
     double intersect[] = {projection * sp[0] + ai->st.self->cx[0], projection * sp[1] + ai->st.self->cy[0]};
     if (pow(ai->st.opp->cx[0] - intersect[0], 2) + pow(ai->st.opp->cy[0] - intersect[1], 2) > pow((KICKER_LENGTH + OPPO_RADIUS) * 1.2, 2))
     {
+        fprintf(stderr, "333333333333\n");
         return false;
     }
     return true;
@@ -969,12 +972,12 @@ void chase(struct RoboAI *ai, double *pos)
     // theta between two vectors
     double theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
 
-    
-
     if (ai->st.opp)
     {
+        fprintf(stderr, "44444444\n");
         if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 3.0 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 3.0 * (KICKER_LENGTH + OPPO_RADIUS))
         {
+            fprintf(stderr, "555555555555\n");
             bool block = blocking(pos, ai);
             if (block)
             {
