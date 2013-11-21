@@ -43,11 +43,11 @@
 #define OPPO_RADIUS 150  
 #define BOT_HIGHT 200
 #define BALL_HIGHT 30
-#define OPP_HIGHT 150
+#define OPP_HIGHT 0.0
 #define FIELD_LENGTH 1400//1.4
 #define FIELD_WIDTH 900//0.8
-#define CAM_DISTANCE 220//0.2
-#define CAM_OFF_MID 800
+#define CAM_DISTANCE 100//0.2
+#define CAM_OFF_MID 580
 #define CAM_HIGHT 1300//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
