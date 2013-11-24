@@ -34,23 +34,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ANGLE_TOL 0.5
+#define ANGLE_TOL 0.4
 #define PI 3.14159265359
-#define MOVE_SPEED 40
-#define MAX_SPEED 60
+#define SLOW_MOVE_SPEED 38
+#define FAST_MOVE_SPEED 50
+#define MAX_SPEED 75
 #define KICK_SPEED 100
-#define POSITION_TOL 20
+#define POSITION_TOL 30
 #define KICKER_LENGTH 140// 75 
 #define OPPO_RADIUS 150  
-#define BOT_HIGHT 200
+#define BOT_HIGHT 190
 #define BALL_HIGHT 30
 #define OPPO_RADIUS 150
 #define OPP_HIGHT 0.0
-#define FIELD_LENGTH 1400//1.4
-#define FIELD_WIDTH 900//0.8
-#define CAM_DISTANCE 100//0.2
-#define CAM_OFF_MID 580
-#define CAM_HIGHT 1300//1.3
+#define FIELD_LENGTH 1500//1.4
+#define FIELD_WIDTH 1100//0.8
+#define CAM_DISTANCE 30//0.2
+#define CAM_X 520
+#define CAM_HIGHT 1810//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -69,15 +70,16 @@
 int direction = 1;
 bool kicking = false;
 double total_time = 0.0;
-double dir_time = 0.0;
+double dir_time = 2.0;
 
 double left_pos[2];
 double right_pos[2];
 double push_pos[2];
 struct RoboAI *myai;
-double cam_pos[] = {CAM_OFF_MID,-(FIELD_WIDTH+CAM_DISTANCE)};
+double cam_pos[] = {CAM_X,-(FIELD_WIDTH+CAM_DISTANCE)};
 
 int pre_l_power=0, pre_r_power=0;
+int current_speed;
 
 
 void clear_motion_flags(struct RoboAI *ai)
@@ -181,7 +183,7 @@ void track_agents(struct RoboAI *ai, struct blob *blobs)
         if (mg > NOISE_VAR)       // Enable? disable??
         {
             ai->st.ball->vx[0] = vx;
-            ai->st.ball->vx[1] = vy;
+            ai->st.ball->vy[0] = vy;
             vx /= mg;
             vy /= mg;
             ai->st.ball->mx = vx;
@@ -440,7 +442,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
     {
         update_kick_pos(ai);
         update_push_pos(ai);
-        fprintf(stderr, "blocking: %d\n", blocking(left_pos, ai));
+        // fprintf(stderr, "blocking: %d\n", blocking(left_pos, ai));
     }
     switch (state)
     {
@@ -460,6 +462,14 @@ int fsm(int mode, int state, struct RoboAI *ai)
                     chase_lr_or_push(&state, ai);
                 } 
             }
+            else if (mode == MODE_SOCCER)
+            {
+                if (find_ball(&state, ai))
+                {
+                    chase_lr_or_push(&state, ai);
+                    at_kick_pos(&state, ai);
+                }
+            }
             break;
         case FINISH:
             if (mode == MODE_PENALTY)
@@ -468,6 +478,12 @@ int fsm(int mode, int state, struct RoboAI *ai)
             }
             else if (mode == MODE_CHASE)
             {
+                //shouldn't be here
+                state = START;
+            }
+            else if (mode == MODE_SOCCER)
+            {
+                //shouldn't be here
                 state = START;
             }   
             break;
@@ -475,20 +491,24 @@ int fsm(int mode, int state, struct RoboAI *ai)
         case KICK_LEFT:
             if (mode == MODE_PENALTY)
             {
+                int temp = state;
                 if (find_ball(&state, ai))
                 {
-                    int temp = state;
                     chase_lr_or_push(&state, ai);
                     at_kick_pos(&state, ai);
-                    if (kicking)
+                }
+                if (kicking)
+                {
+                    state = temp;
+                    if (!kick_miss())   
                     {
-                        state = temp;
-                    }
-                    if (!kick_miss())
-                    {
-                        kick_finished(&state);
+                        if (kick_finished(&state))
+                        {
+                            state = FINISH;
+                        }
                     }
                 }
+                    
                 // else
                 // {
                 //     stop_kicker(&state);
@@ -500,6 +520,30 @@ int fsm(int mode, int state, struct RoboAI *ai)
                 {
                     chase_lr_or_push(&state, ai);
                 } 
+            }
+            else if (mode == MODE_SOCCER)
+            {
+                int temp = state;
+                if (find_ball(&state, ai))
+                {
+                    chase_lr_or_push(&state, ai);
+                    at_kick_pos(&state, ai);
+                }
+                if (kicking)
+                {
+                    printf("11111111111111\n");
+                    state = temp;
+                    if (!kick_miss())   
+                    {
+                        printf("2222222222222\n");
+                        if (kick_finished(&state))
+                        {
+                            printf("333333333333333\n");
+                            //do nothing
+                            state = FINISH;
+                        }
+                    }
+                }
             }
             break;
         case CHASE_TO_LEFT:
@@ -519,6 +563,14 @@ int fsm(int mode, int state, struct RoboAI *ai)
                 {
                     chase_lr_or_push(&state, ai);
                 } 
+            }
+            else if (mode == MODE_SOCCER)
+            {
+                if (find_ball(&state, ai))
+                {
+                    chase_lr_or_push(&state, ai);
+                    at_kick_pos(&state, ai);
+                }
             }
             break;
     }
@@ -571,7 +623,6 @@ bool kick_finished(int *state)
         stop_kicker();
         total_time = 0.0;
         kicking = false;
-        *state = FINISH;
         return true;
     }
     return false;
@@ -619,7 +670,22 @@ void chase_lr_or_push(int *state, struct RoboAI *ai)
     double right_dist = pow(sx - right_pos[0], 2) + pow(sy - right_pos[1], 2);
     bool left_reach = reachable(left_pos[0], left_pos[1]);
     bool right_reach = reachable(right_pos[0], right_pos[1]);
-    if (left_reach && right_reach)
+    bool push_reach = reachable(push_pos[0], push_pos[1]);
+
+    double gate[] = {(1 - ai->st.side) * FIELD_LENGTH, -FIELD_WIDTH / 2.0};
+    bool block = false;
+
+    if (ai->st.opp && ai->st.ball && ai->st.self)
+    {
+        // fprintf(stderr, "1111111111111\n");
+        block = oppo_on_line(ai->st.opp, ai->st.ball, gate, OPPO_RADIUS * 1.5);
+    }
+
+    if (block && push_reach)
+    {
+        *state = PUSH;
+    }
+    else if (left_reach && right_reach)
     {
         if (left_dist < right_dist)
         {
@@ -763,23 +829,34 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     //fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
     // If the current motion vector is meaningful (x or y component more than 1 pixel/frame) update
     // blob heading as a unit vector.
-    if (pre_l_power * pre_r_power < 0)
+    // if (pre_l_power * pre_r_power < 0)
+    // {
+    //     double pre_heading = atan2(myblob->mx, myblob->my);
+    //     double theta;
+    //     theta = getTimeDiff() * (abs(pre_r_power) + abs(pre_l_power)) * PI / 100.0;// * (current_speed / 100.0);
+    //     if (abs(pre_r_power) > abs(pre_l_power))   
+    //     {
+    //         theta *= -1.0;
+    //     }
+    //     myblob->mx = sin(pre_heading + theta);
+    //     myblob->my = cos(pre_heading + theta);
+    // }
+    if (fabs(pre_l_power - pre_r_power) > current_speed * 0.3)
     {
         double pre_heading = atan2(myblob->mx, myblob->my);
         double theta;
-        theta = getTimeDiff() * (abs(pre_r_power) + abs(pre_l_power)) * PI / 100.0;
-        if (abs(pre_r_power) > abs(pre_l_power))   
-        {
-            theta *= -1.0;
-        }
+        theta = getTimeDiff() * (pre_l_power - pre_r_power) * PI / 100.0 * (current_speed / 100.0);
+        
         myblob->mx = sin(pre_heading + theta);
         myblob->my = cos(pre_heading + theta);
+        // fprintf(stderr, "my111111111111111111\n" );
     }
     else if (fabs(myblob->vx[0]) > noiseV && fabs(myblob->vy[0]) > noiseV)
     {
         len = 1.0 / sqrt((myblob->vx[0] * myblob->vx[0]) + (myblob->vy[0] * myblob->vy[0]));
         myblob->mx = myblob->vx[0] * len;
         myblob->my = myblob->vy[0] * len;
+        // fprintf(stderr, "his22222222222222\n" );
     }
 
     // myblob->vx[0] = p->vx[0];
@@ -809,7 +886,16 @@ void update_my_ai(struct RoboAI *ai)
 
 void update_push_pos(struct RoboAI *ai)
 {
-    //TODO
+    double gy = -FIELD_WIDTH / 2.0;
+    double gx = (1 - ai->st.side) * FIELD_LENGTH;
+    double bx = ai->st.ball->cx[0];
+    double by = ai->st.ball->cy[0];
+    double ball_to_gate[2] = {gx - bx, gy - by};
+    double norm = sqrt(pow(ball_to_gate[0], 2) + pow(ball_to_gate[1], 2));
+    ball_to_gate[0] = ball_to_gate[0] / norm * (KICKER_LENGTH - POSITION_TOL);
+    ball_to_gate[1] = ball_to_gate[1] / norm * (KICKER_LENGTH - POSITION_TOL);
+    push_pos[0] = bx - ball_to_gate[0];
+    push_pos[1] = by - ball_to_gate[1];
 }
 
 void update_kick_pos(struct RoboAI *ai)
@@ -829,11 +915,74 @@ void update_kick_pos(struct RoboAI *ai)
     right_pos[1] = by - b[1];
 }
 
+bool oppo_on_line(struct blob *opp, struct blob *from, double *to, double min_dist)
+{
+    double so[] = {opp->cx[0] - from->cx[0], opp->cy[0] - from->cy[0]};
+    double sp[] = {to[0] - from->cx[0], to[1] - from->cy[0]};
+    double product = so[0] * sp[0] + so[1] * sp[1];
+    if (product <= 0.0)
+    {
+        // fprintf(stderr, "22222222222222\n");
+        return false;
+    }
+    double norm_sp2 = sp[0] * sp[0] + sp[1] * sp[1];
+    double projection = (so[0] * sp[0] + so[1] * sp[1])/norm_sp2;
+    double intersect[] = {projection * sp[0] + from->cx[0], projection * sp[1] + from->cy[0]};
+    if (pow(opp->cx[0] - intersect[0], 2) + pow(opp->cy[0] - intersect[1], 2) > pow(min_dist, 2))
+    {
+        // fprintf(stderr, "333333333333\n");
+        return false;
+    }
+    return true;
+}
+
 bool at_kick_pos(int *state, struct RoboAI *ai)
 {
+    double gate[] = {(1 - ai->st.side) * FIELD_LENGTH, -FIELD_WIDTH / 2.0};
     double sx = ai->st.self->cx[0];
     double sy = ai->st.self->cy[0];
-    if (fabs(left_pos[0] - sx) < POSITION_TOL && fabs(left_pos[1] - sy) < POSITION_TOL)
+    bool block = false;
+
+    if (ai->st.opp && ai->st.ball && ai->st.self)
+    {
+        // fprintf(stderr, "1111111111111\n");
+        block = oppo_on_line(ai->st.opp, ai->st.ball, gate, OPPO_RADIUS * 1.5);
+    }
+
+    if (block)
+    {
+        if (fabs(ai->st.ball->cx[0] - sx) < KICKER_LENGTH + POSITION_TOL && fabs(ai->st.ball->cy[0] - sy) < KICKER_LENGTH + POSITION_TOL)
+        {
+            if (ai->st.side)
+            {
+                if (ai->st.ball->cy[0] - sy > 0.0)
+                {
+                    *state = KICK_LEFT;
+                    // fprintf(stderr, "1111111111111\n" );
+                }
+                else
+                {
+                    *state = KICK_RIGHT;
+                    // fprintf(stderr, "22222222222222222\n");
+                }
+            }
+            else
+            {
+                if (ai->st.ball->cy[0] - sy > 0.0)
+                {
+                    *state = KICK_RIGHT;
+                    // fprintf(stderr, "333333333333\n");
+                }
+                else
+                {
+                    *state = KICK_LEFT;
+                    // fprintf(stderr, "4444444444444\n");
+                }
+            }
+            return true;
+        }
+    }
+    else if (fabs(left_pos[0] - sx) < POSITION_TOL && fabs(left_pos[1] - sy) < POSITION_TOL)
     {
         *state = KICK_LEFT;
         return true;
@@ -885,28 +1034,31 @@ void move(double theta, struct RoboAI *ai)
 {
     double left_power = 0.0;
     double right_power = 0.0;
+    current_speed = SLOW_MOVE_SPEED;
+
+    if (fabs(ai->st.self->cx[0] - ai->st.ball->cx[0]) > 300 || fabs(ai->st.self->cy[0] - ai->st.ball->cy[0]) > 300)
+    {
+        current_speed = MAX_SPEED;
+    }
+    else if (fabs(ai->st.self->cx[0] - ai->st.ball->cx[0]) > 200 || fabs(ai->st.self->cy[0] - ai->st.ball->cy[0]) > 200)
+    {
+        current_speed = FAST_MOVE_SPEED;
+    }
+
     if (theta >= ANGLE_TOL)
     {
-        left_power = MOVE_SPEED;
-        right_power = cos(theta * 2.0) * MOVE_SPEED;
+        left_power = current_speed;
+        right_power = cos(theta * 2.0) * current_speed;
     }
     else if (theta <= -ANGLE_TOL)
     {
-        right_power = MOVE_SPEED;
-        left_power = cos(theta * 2.0) * MOVE_SPEED;
+        right_power = current_speed;
+        left_power = cos(theta * 2.0) * current_speed;
     }
     else
     {
-        if (fabs(ai->st.self->cx[0] - ai->st.ball->cx[0]) > 300 || fabs(ai->st.self->cy[0] - ai->st.ball->cy[0]) > 300)
-        {
-            left_power = MAX_SPEED;
-            right_power = MAX_SPEED;
-        }
-        else
-        {
-            left_power = MOVE_SPEED;
-            right_power = MOVE_SPEED;
-        }
+        left_power = current_speed;
+        right_power = current_speed;
     }
 
     apply_power(my_round(left_power), my_round(right_power));
@@ -915,7 +1067,7 @@ void move(double theta, struct RoboAI *ai)
 void reverse_dir(struct blob *b)
 {
     int i;
-    if (dir_time > 1.5)
+    if (dir_time > 1.0)
     {
         direction = -direction;
         b->mx *= -1.0;
@@ -948,16 +1100,16 @@ void chase(struct RoboAI *ai, double *pos)
     double theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
     if (ai->st.opp)
     {
-        fprintf(stderr, "44444444\n");
-        if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 1.2 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 1.2 * (KICKER_LENGTH + OPPO_RADIUS))
+        // fprintf(stderr, "44444444\n");
+        if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 1.5 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 1.5 * (KICKER_LENGTH + OPPO_RADIUS))
         {
-            fprintf(stderr, "x: %f,  y: %f, 1.2 * (KICKER_LENGTH + OPPO_RADIUS): %f\n",fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]),fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]),  1.2 * (KICKER_LENGTH + OPPO_RADIUS));
+            // fprintf(stderr, "x: %f,  y: %f, 1.2 * (KICKER_LENGTH + OPPO_RADIUS): %f\n",fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]),fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]),  1.2 * (KICKER_LENGTH + OPPO_RADIUS));
             bool block = blocking(pos, ai);
             if (block)
             {
                 double leave_angle;
                 leave_angle = atan2(ai->st.self->cx[0] - ai->st.opp->cx[0], ai->st.self->cy[0] - ai->st.opp->cy[0]);
-                td = atan2(sin(td)+sin(leave_angle)*0.5,cos(td)+cos(leave_angle)*0.5);
+                td = atan2(sin(td)+sin(leave_angle)*0.6,cos(td)+cos(leave_angle)*0.6);
 
                 theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
             }
@@ -990,7 +1142,7 @@ bool blocking(double *pos, struct RoboAI *ai)
     // ai->st.opp->cy[0] = 0.0;
     if (!ai->st.opp || !ai->st.ball || !ai->st.self)
     {
-        fprintf(stderr, "1111111111111\n");
+        // fprintf(stderr, "1111111111111\n");
         return false;
     }
     double so[] = {ai->st.opp->cx[0] - ai->st.self->cx[0], ai->st.opp->cy[0] - ai->st.self->cy[0]};
@@ -998,7 +1150,7 @@ bool blocking(double *pos, struct RoboAI *ai)
     double product = so[0] * sp[0] + so[1] * sp[1];
     if (product <= 0.0)
     {
-        fprintf(stderr, "22222222222222\n");
+        // fprintf(stderr, "22222222222222\n");
         return false;
     }
     double norm_sp2 = sp[0] * sp[0] + sp[1] * sp[1];
@@ -1006,7 +1158,7 @@ bool blocking(double *pos, struct RoboAI *ai)
     double intersect[] = {projection * sp[0] + ai->st.self->cx[0], projection * sp[1] + ai->st.self->cy[0]};
     if (pow(ai->st.opp->cx[0] - intersect[0], 2) + pow(ai->st.opp->cy[0] - intersect[1], 2) > pow((KICKER_LENGTH + OPPO_RADIUS) * 1.2, 2))
     {
-        fprintf(stderr, "333333333333\n");
+        // fprintf(stderr, "333333333333\n");
         return false;
     }
     return true;

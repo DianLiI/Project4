@@ -115,14 +115,14 @@ void kbHandler(unsigned char key, int x, int y)
  // Controls for recording the corners of the playing field
  if (key =='z')
  {
-   Mcorners[0][0]=130.0;
-   Mcorners[0][1]=20.0;
-   Mcorners[1][0]=1096.0;
-   Mcorners[1][1]=10.0;
-   Mcorners[2][0]=1251.0;
-   Mcorners[2][1]=635.0;
-   Mcorners[3][0]=41.0;
-   Mcorners[3][1]=690.0;
+   Mcorners[0][0]=254.0;
+   Mcorners[0][1]=40.0;
+   Mcorners[1][0]=1026.0;
+   Mcorners[1][1]=105.0;
+   Mcorners[2][0]=1056.0;
+   Mcorners[2][1]=623.0;
+   Mcorners[3][0]=122.0;
+   Mcorners[3][1]=608.0;
    cornerIdx = 4;
    toggleProc=0;
  }

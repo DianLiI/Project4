@@ -152,4 +152,5 @@ void my_kick(int speed);
 bool kick_finished(int *state);
 void reverse_dir(struct blob *b);
 bool blocking(double *pos, struct RoboAI *ai);
+bool oppo_on_line(struct blob *opp, struct blob *from, double *to, double min_dist);
 #endif
