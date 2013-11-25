@@ -37,21 +37,20 @@
 #define ANGLE_TOL 0.4
 #define PI 3.14159265359
 #define SLOW_MOVE_SPEED 38
-#define FAST_MOVE_SPEED 50
-#define MAX_SPEED 75
+#define FAST_MOVE_SPEED 45
+#define MAX_SPEED 65
 #define KICK_SPEED 100
 #define POSITION_TOL 30
-#define KICKER_LENGTH 140// 75 
-#define OPPO_RADIUS 150  
+#define KICKER_LENGTH 140// 75  
 #define BOT_HIGHT 190
 #define BALL_HIGHT 30
-#define OPPO_RADIUS 150
-#define OPP_HIGHT 0.0
-#define FIELD_LENGTH 1500//1.4
-#define FIELD_WIDTH 1100//0.8
-#define CAM_DISTANCE 30//0.2
-#define CAM_X 520
-#define CAM_HIGHT 1810//1.3
+#define OPPO_RADIUS 180
+#define OPP_HIGHT 160.0
+#define FIELD_LENGTH 1800//1.4
+#define FIELD_WIDTH 1160//0.8
+#define CAM_DISTANCE 1360//0.2
+#define CAM_X 1170
+#define CAM_HIGHT 1800//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -344,6 +343,9 @@ int setupAI(int mode, int own_col, struct RoboAI *ai)
     ai->st.oppID = 0;
     ai->st.ballID = 0;
     clear_motion_flags(ai);
+
+    all_stop();
+    stop_kicker();
     fprintf(stderr, "Initialized!\n");
     return (1);
 }
@@ -531,16 +533,16 @@ int fsm(int mode, int state, struct RoboAI *ai)
                 }
                 if (kicking)
                 {
-                    printf("11111111111111\n");
+                    // printf("11111111111111\n");
                     state = temp;
                     if (!kick_miss())   
                     {
-                        printf("2222222222222\n");
+                        // printf("2222222222222\n");
                         if (kick_finished(&state))
                         {
-                            printf("333333333333333\n");
+                            // printf("333333333333333\n");
                             //do nothing
-                            state = FINISH;
+                            state = START;
                         }
                     }
                 }
@@ -755,8 +757,9 @@ void init_my_ai(struct RoboAI *ai)
     myai->st.ballID = 0;
     direction = 1;
 
-// kicking = false;
-// total_time = 0.0;
+    dir_time = 2.0;
+    kicking = false;
+    total_time = 0.0;
 }
 
 void init_blob(struct blob *myblob, struct blob *p, double height)
@@ -1101,7 +1104,7 @@ void chase(struct RoboAI *ai, double *pos)
     if (ai->st.opp)
     {
         // fprintf(stderr, "44444444\n");
-        if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 1.5 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 1.5 * (KICKER_LENGTH + OPPO_RADIUS))
+        if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 1.3 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 1.3 * (KICKER_LENGTH + OPPO_RADIUS))
         {
             // fprintf(stderr, "x: %f,  y: %f, 1.2 * (KICKER_LENGTH + OPPO_RADIUS): %f\n",fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]),fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]),  1.2 * (KICKER_LENGTH + OPPO_RADIUS));
             bool block = blocking(pos, ai);
@@ -1109,7 +1112,7 @@ void chase(struct RoboAI *ai, double *pos)
             {
                 double leave_angle;
                 leave_angle = atan2(ai->st.self->cx[0] - ai->st.opp->cx[0], ai->st.self->cy[0] - ai->st.opp->cy[0]);
-                td = atan2(sin(td)+sin(leave_angle)*0.6,cos(td)+cos(leave_angle)*0.6);
+                td = atan2(sin(td)+sin(leave_angle)*0.75,cos(td)+cos(leave_angle)*0.75);
 
                 theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
             }
