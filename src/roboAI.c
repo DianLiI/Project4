@@ -46,11 +46,11 @@
 #define BALL_HIGHT 30
 #define OPPO_RADIUS 180
 #define OPP_HIGHT 160.0
-#define FIELD_LENGTH 1800//1.4
-#define FIELD_WIDTH 1160//0.8
-#define CAM_DISTANCE 1360//0.2
-#define CAM_X 1170
-#define CAM_HIGHT 1800//1.3
+#define FIELD_LENGTH 1600//1.4
+#define FIELD_WIDTH 1040//0.8
+#define CAM_DISTANCE 80//0.2
+#define CAM_X 1660
+#define CAM_HIGHT 1290//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -414,7 +414,7 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
         int mode = ai->st.state / 100;
         int sub_state = ai->st.state % 100;
         update_my_ai(ai);
-        int next_state = fsm(mode, sub_state, myai) + mode * 100;
+        int next_state = fsm(mode, sub_state, myai, ai) + mode * 100;
         if (dir_time < 2)
         {
             dir_time += getTimeDiff();
@@ -437,10 +437,10 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
  there.
 **********************************************************************************/
 
-int fsm(int mode, int state, struct RoboAI *ai)
+int fsm(int mode, int state, struct RoboAI *ai, struct RoboAI *pai)
 {
     int fake_state = 0;
-    if (find_ball(&fake_state, ai))
+    if (find_ball(&fake_state, pai))
     {
         update_kick_pos(ai);
         update_push_pos(ai);
@@ -451,7 +451,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
         case START:
             if (mode == MODE_PENALTY)
             {
-                if (find_ball(&state, ai))
+                if (find_ball(&state, pai))
                 {
                     chase_lr_or_push(&state, ai);
                     at_kick_pos(&state, ai);
@@ -459,14 +459,14 @@ int fsm(int mode, int state, struct RoboAI *ai)
             }
             else if (mode == MODE_CHASE)
             {
-                if (find_ball(&state, ai))
+                if (find_ball(&state, pai))
                 {
                     chase_lr_or_push(&state, ai);
                 } 
             }
             else if (mode == MODE_SOCCER)
             {
-                if (find_ball(&state, ai))
+                if (find_ball(&state, pai))
                 {
                     chase_lr_or_push(&state, ai);
                     at_kick_pos(&state, ai);
@@ -494,7 +494,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
             if (mode == MODE_PENALTY)
             {
                 int temp = state;
-                if (find_ball(&state, ai))
+                if (find_ball(&state, pai))
                 {
                     chase_lr_or_push(&state, ai);
                     at_kick_pos(&state, ai);
@@ -518,7 +518,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
             }
             else if (mode == MODE_CHASE)
             {
-                if (find_ball(&state, ai))
+                if (find_ball(&state, pai))
                 {
                     chase_lr_or_push(&state, ai);
                 } 
@@ -526,7 +526,7 @@ int fsm(int mode, int state, struct RoboAI *ai)
             else if (mode == MODE_SOCCER)
             {
                 int temp = state;
-                if (find_ball(&state, ai))
+                if (find_ball(&state, pai))
                 {
                     chase_lr_or_push(&state, ai);
                     at_kick_pos(&state, ai);
@@ -731,11 +731,14 @@ void chase_lr_or_push(int *state, struct RoboAI *ai)
 }
 void init_my_ai(struct RoboAI *ai)
 {
-    myai = malloc(sizeof(struct RoboAI));
+    if (myai == NULL)
+    {
+        myai = malloc(sizeof(struct RoboAI));
+        myai->st.ball = malloc(sizeof(struct blob));
+        myai->st.self = malloc(sizeof(struct blob));
+        myai->st.opp = malloc(sizeof(struct blob));
+    }
     myai->st.state = ai->st.state;
-    myai->st.ball = malloc(sizeof(struct blob));
-    myai->st.self = malloc(sizeof(struct blob));
-    myai->st.opp = malloc(sizeof(struct blob));
     init_blob(myai->st.ball, ai->st.ball, BALL_HIGHT);
     init_blob(myai->st.self, ai->st.self, BOT_HIGHT);
     init_blob(myai->st.opp, ai->st.opp, OPP_HIGHT);

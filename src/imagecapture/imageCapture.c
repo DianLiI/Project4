@@ -115,14 +115,14 @@ void kbHandler(unsigned char key, int x, int y)
  // Controls for recording the corners of the playing field
  if (key =='z')
  {
-   Mcorners[0][0]=305.0;
-   Mcorners[0][1]=190.0;
-   Mcorners[1][0]=965.0;
-   Mcorners[1][1]=165.0;
-   Mcorners[2][0]=1045.0;
-   Mcorners[2][1]=510.0;
-   Mcorners[3][0]=170.0;
-   Mcorners[3][1]=520.0;
+    Mcorners[0][0]=265.000000;
+    Mcorners[0][1]=5.000000;
+    Mcorners[1][0]=1120.000000;
+    Mcorners[1][1]=5.000000;
+    Mcorners[2][0]=1050.000000;
+    Mcorners[2][1]=715.000000;
+    Mcorners[3][0]=5.000000;
+    Mcorners[3][1]=520.000000;
    cornerIdx = 4;
    toggleProc=0;
  }
@@ -483,8 +483,10 @@ double *getH(void)
   cD[0]=((*(H+0))*corners2[i][0])+((*(H+1))*corners2[i][1])+((*(H+2)));
   cD[1]=((*(H+3))*corners2[i][0])+((*(H+4))*corners2[i][1])+((*(H+5)));
   cD[2]=((*(H+6))*corners2[i][0])+((*(H+7))*corners2[i][1])+((*(H+8)));
-  fprintf(stderr,"Converts (%f,%f) to (%f,%f)\n",corners2[i][0],corners2[i][1],\
-          cD[0]/cD[2],cD[1]/cD[2]);
+  // fprintf(stderr,"Converts (%f,%f) to (%f,%f)\n",corners2[i][0],corners2[i][1],\
+  //         cD[0]/cD[2],cD[1]/cD[2]);
+  fprintf(stderr,"Mcorners[%d][0]=%f;\n",i, cD[0]/cD[2]);
+  fprintf(stderr,"Mcorners[%d][1]=%f;\n",i, cD[1]/cD[2]);
  }
  return(H);
 }
