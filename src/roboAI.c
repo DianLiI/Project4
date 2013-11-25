@@ -325,7 +325,7 @@ int setupAI(int mode, int own_col, struct RoboAI *ai)
     ai->st.ball = NULL;
     ai->st.self = NULL;
     ai->st.opp = NULL;
-    ai->st.side = 0;
+    ai->st.side = -1;
     ai->st.botCol = own_col;
     ai->st.old_bcx = 0;
     ai->st.old_bcy = 0;
@@ -414,7 +414,9 @@ void AI_main(struct RoboAI *ai, struct blob *blobs, void *state)
         int mode = ai->st.state / 100;
         int sub_state = ai->st.state % 100;
         update_my_ai(ai);
-        int next_state = fsm(mode, sub_state, myai, ai) + mode * 100;
+        // int next_state = fsm(mode, sub_state, myai, ai) + mode * 100;
+        //leave it for now
+        int next_state = fsm(mode, sub_state, myai, myai) + mode * 100;
         if (dir_time < 2)
         {
             dir_time += getTimeDiff();
@@ -742,7 +744,7 @@ void init_my_ai(struct RoboAI *ai)
     init_blob(myai->st.ball, ai->st.ball, BALL_HIGHT);
     init_blob(myai->st.self, ai->st.self, BOT_HIGHT);
     init_blob(myai->st.opp, ai->st.opp, OPP_HIGHT);
-    myai->st.side = ai->st.side;
+    // myai->st.side = ai->st.side;
     myai->st.old_bcx = 0;
     myai->st.old_bcy = 0;
     myai->st.old_scx = 0;
@@ -872,7 +874,10 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
 }
 void update_my_ai(struct RoboAI *ai)
 {
-    myai->st.side = ai->st.side;
+    if (myai->st.side == -1)
+    {
+        myai->st.side = ai->st.side;
+    }
     myai->st.state = ai->st.state;
     if (ai->st.ball)
     {
