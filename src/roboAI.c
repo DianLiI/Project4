@@ -46,11 +46,11 @@
 #define BALL_HIGHT 30
 #define OPPO_RADIUS 180
 #define OPP_HIGHT 160.0
-#define FIELD_LENGTH 1600//1.4
-#define FIELD_WIDTH 1040//0.8
-#define CAM_DISTANCE 80//0.2
-#define CAM_X 1660
-#define CAM_HIGHT 1290//1.3
+#define FIELD_LENGTH 1690//1.4
+#define FIELD_WIDTH 1490//0.8
+#define CAM_DISTANCE 580//0.2
+#define CAM_X 900
+#define CAM_HIGHT 2180//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/

@@ -116,13 +116,13 @@ void kbHandler(unsigned char key, int x, int y)
  if (key =='z')
  {
     Mcorners[0][0]=265.000000;
-    Mcorners[0][1]=5.000000;
-    Mcorners[1][0]=1120.000000;
-    Mcorners[1][1]=5.000000;
-    Mcorners[2][0]=1050.000000;
-    Mcorners[2][1]=715.000000;
-    Mcorners[3][0]=5.000000;
-    Mcorners[3][1]=520.000000;
+    Mcorners[0][1]=25.000000;
+    Mcorners[1][0]=1040.000000;
+    Mcorners[1][1]=15.000000;
+    Mcorners[2][0]=1190.000000;
+    Mcorners[2][1]=690.000000;
+    Mcorners[3][0]=159.000000;
+    Mcorners[3][1]=705.000000;
    cornerIdx = 4;
    toggleProc=0;
  }
