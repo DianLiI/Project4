@@ -474,10 +474,11 @@ int fsm(int mode, int state, struct RoboAI *ai, struct RoboAI *pai)
     int fake_state = 0;
     if (find_ball(&fake_state, pai))
     {
+        // update pos's
         update_kick_pos(ai);
         update_push_pos(ai);
-        // fprintf(stderr, "blocking: %d\n", blocking(left_pos, ai));
     }
+    // change states
     switch (state)
     {
         case START:
@@ -543,10 +544,6 @@ int fsm(int mode, int state, struct RoboAI *ai, struct RoboAI *pai)
                     }
                 }
                     
-                // else
-                // {
-                //     stop_kicker(&state);
-                // }
             }
             else if (mode == MODE_CHASE)
             {
@@ -609,6 +606,7 @@ int fsm(int mode, int state, struct RoboAI *ai, struct RoboAI *pai)
             break;
     }
 
+    // action now!
     switch (state)
     {
         case START:
@@ -634,10 +632,10 @@ int fsm(int mode, int state, struct RoboAI *ai, struct RoboAI *pai)
             chase(ai, push_pos);
             break;
     }
-    //fprintf(stderr, "state: %d   left_pos: [%f, %f]     right_pos: [%f, %f]\n", ai->st.state, left_pos[0], left_pos[1], right_pos[0], right_pos[1]);
     return state;
 }
 
+/*Return true if ball is not kicked*/
 bool kick_miss(int *state)
 {
     //TODO
@@ -650,6 +648,7 @@ bool kick_miss(int *state)
     return false;
 }
 
+/*Return true if kicking action is finished*/
 bool kick_finished(int *state)
 {
     if (total_time > 0.45)
@@ -661,6 +660,9 @@ bool kick_finished(int *state)
     }
     return false;
 }
+
+/*customized kick function
+performe kick in a time interval*/
 void my_kick(int speed)
 {
     if (!kicking)
@@ -671,6 +673,7 @@ void my_kick(int speed)
     total_time += getTimeDiff();
 }
 
+/*Return true if ball is in the field*/
 bool find_ball(int *state, struct RoboAI *ai)
 {
     //TODO need to check something else
@@ -685,17 +688,20 @@ bool find_ball(int *state, struct RoboAI *ai)
     }
 }
 
+/*Return true if the pos is reachable*/
 bool reachable(double x, double y)
 {
     return (x > KICKER_LENGTH && x < FIELD_LENGTH - KICKER_LENGTH) && (-y > KICKER_LENGTH && -y < FIELD_WIDTH - KICKER_LENGTH);
 }
 
+/*Return true if should push the ball*/
 bool pushable(double x, double y)
 {
     //TODO check in front of gate
     return false;
 }
 
+/*Change the state to chase or kick*/
 void chase_lr_or_push(int *state, struct RoboAI *ai)
 {
     double sx = ai->st.self->cx[0];
@@ -711,7 +717,6 @@ void chase_lr_or_push(int *state, struct RoboAI *ai)
 
     if (ai->st.opp && ai->st.ball && ai->st.self)
     {
-        // fprintf(stderr, "1111111111111\n");
         block = oppo_on_line(ai->st.opp, ai->st.ball, gate, OPPO_RADIUS * 1.5);
     }
 
@@ -745,22 +750,9 @@ void chase_lr_or_push(int *state, struct RoboAI *ai)
             *state = PUSH;
         }
     }
-    // printf("diff: %f     %d\n", left_dist - right_dist, reachable(left_pos[0], left_pos[1]));
-    // if (left_dist < right_dist && reachable(left_pos[0], left_pos[1]))
-    // {
-    //     *state = CHASE_TO_LEFT;
-    //     // fprintf(stderr, "left is closer!!!!!!!!!!!!!!!!!!\n");
-    // }
-    // else if (left_dist >= right_dist && reachable(right_pos[0], right_pos[1]))
-    // {
-    //     *state = CHASE_TO_RIGHT;
-    //     // fprintf(stderr, "right is closer!!!!!!!!!!!!!!!!!!\n");
-    // }
-    // else if (pushable(right_pos[0], right_pos[1]))
-    // {
-    //     *state = PUSH;
-    // }
 }
+
+/*inistialize my ai*/
 void init_my_ai(struct RoboAI *ai)
 {
     if (myai == NULL)
@@ -797,13 +789,10 @@ void init_my_ai(struct RoboAI *ai)
     total_time = 0.0;
 }
 
+/*initialize a blob*/
 void init_blob(struct blob *myblob, struct blob *p, double height)
 {
     int i;
-    // myblob->cx = malloc(sizeof(double));
-    // myblob->cy = malloc(sizeof(double));
-    // myblob->vx = malloc(sizeof(double));
-    // myblob->vy = malloc(sizeof(double));
     if (!p)
     {
         return;
@@ -816,7 +805,6 @@ void init_blob(struct blob *myblob, struct blob *p, double height)
         double vectory= cam_pos[1] - projy;
         double length1 = sqrt(pow(vectorx,2)+pow(vectory,2));
         double length2 = length1 / CAM_HIGHT * height;
-        // fprintf(stderr, "cam_pos[0]  %f projx %f, cam_pos[1] %f projy %f length1 %f length2 %f", cam_pos[0] ,projx , cam_pos[1] , projy , length1 , length2);
         double ratio = length2 / length1;
         myblob->cx[i] = projx + vectorx * ratio;
         myblob->cy[i] = projy + vectory * ratio;
@@ -825,6 +813,7 @@ void init_blob(struct blob *myblob, struct blob *p, double height)
     }
 }
 
+/*update the kicking positions*/
 void update_pos(struct blob *myblob, struct blob *p, double height)
 {
     double projx = p->cx[0] / SCREEN_WIDTH * FIELD_LENGTH;
@@ -833,14 +822,12 @@ void update_pos(struct blob *myblob, struct blob *p, double height)
     double vectory= cam_pos[1] - projy;
     double length1 = sqrt(pow(vectorx,2)+pow(vectory,2));
     double length2 = length1 / CAM_HIGHT * height;
-    // fprintf(stderr, "cam_pos[0]  %f projx %f, cam_pos[1] %f projy %f length1 %f length2 %f", cam_pos[0] ,projx , cam_pos[1] , projy , length1 , length2);
     double ratio = length2 / length1;
     myblob->cx[0] = projx + vectorx * ratio;
     myblob->cy[0] = projy + vectory * ratio;
-    //fprintf(stderr, "height %f  myblob->cx[0] %f, myblob->cy[0] %f vectorx %f vectory %f\n", height, myblob->cx[0], myblob->cy[0], vectorx, vectory);
 }
 
-
+/*update attributes in blobs*/
 void update_blob(struct blob *myblob, struct blob *p, double height)
 {
     double len;
@@ -856,31 +843,12 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     }
     update_pos(myblob, p, height);
     timediff = getTimeDiff();
-    //timediff = (p->cx[0] - p->cx[1]) / ((p->vx[0] - ((.25 * p->vx[1]) + (.125 * p->vx[2]) + (.0625 * p->vx[3]) + (.0625 * p->vx[4]))) / 0.5);
-    // Instantaneous velocity vector in pixels/second
     myblob->vx[0] = (myblob->cx[0] - myblob->cx[1]) / timediff;
     myblob->vy[0] = (myblob->cy[0] - myblob->cy[1]) / timediff;
 
     // Smoothed velocity vector
-    // myblob->vx[0] = (.5 * myblob->vx[0]) + (.25 * myblob->vx[1]) + (.125 * myblob->vx[2]) + (.0625 * myblob->vx[3]) + (.0625 * myblob->vx[4]);
-    // myblob->vy[0] = (.5 * myblob->vy[0]) + (.25 * myblob->vy[1]) + (.125 * myblob->vy[2]) + (.0625 * myblob->vy[3]) + (.0625 * myblob->vy[4]);
     myblob->vx[0] = (.7 * myblob->vx[0]) + (.2 * myblob->vx[1]) + (.1 * myblob->vx[2]);
     myblob->vy[0] = (.7 * myblob->vy[0]) + (.2 * myblob->vy[1]) + (.1 * myblob->vy[2]);
-    //fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
-    // If the current motion vector is meaningful (x or y component more than 1 pixel/frame) update
-    // blob heading as a unit vector.
-    // if (pre_l_power * pre_r_power < 0)
-    // {
-    //     double pre_heading = atan2(myblob->mx, myblob->my);
-    //     double theta;
-    //     theta = getTimeDiff() * (abs(pre_r_power) + abs(pre_l_power)) * PI / 100.0;// * (current_speed / 100.0);
-    //     if (abs(pre_r_power) > abs(pre_l_power))   
-    //     {
-    //         theta *= -1.0;
-    //     }
-    //     myblob->mx = sin(pre_heading + theta);
-    //     myblob->my = cos(pre_heading + theta);
-    // }
     double pre_heading = atan2(myblob->mx, myblob->my);
     double theta;
     theta = getTimeDiff() * (pre_l_power - pre_r_power) * PI / 100.0 * (current_speed / 100.0);
@@ -900,11 +868,6 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
         myblob->mx = my_mx;
         myblob->my = my_my;
     }
-    // else if (diff < current_speed * 0.2)
-    // {
-    //     myblob->mx = mx;
-    //     myblob->my = my;
-    // }
     else
     {
         myblob->mx = mx * (1 - diff / (double)current_speed * 2.0) + my_mx * diff / (double)current_speed * 2.0;
@@ -914,11 +877,9 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
         myblob->my = myblob->my * norm;
         fprintf(stderr, "myblob->mx: %f,    myblob->my: %f\n", myblob->mx, myblob->my);
     }
-    // myblob->vx[0] = p->vx[0];
-    // myblob->vy[0] = b->vy[0];
-    // myblob->mx = b->mx;
-    // myblob->my = b->my;
 }
+
+/*update attributes in my_ai*/
 void update_my_ai(struct RoboAI *ai)
 {
     if (myai->st.side > 1)
@@ -941,7 +902,7 @@ void update_my_ai(struct RoboAI *ai)
 
 }
 
-
+/*update the postion when we should push the ball to the gate*/
 void update_push_pos(struct RoboAI *ai)
 {
     double gy = -FIELD_WIDTH / 2.0;
@@ -956,6 +917,7 @@ void update_push_pos(struct RoboAI *ai)
     push_pos[1] = by - ball_to_gate[1];
 }
 
+/*update left and right kick positions*/
 void update_kick_pos(struct RoboAI *ai)
 {
     double gy = -FIELD_WIDTH / 2.0;
@@ -973,6 +935,7 @@ void update_kick_pos(struct RoboAI *ai)
     right_pos[1] = by - b[1];
 }
 
+/*Return true if the opponent is blocking the gate*/
 bool oppo_on_line(struct blob *opp, struct blob *from, double *to, double min_dist)
 {
     double so[] = {opp->cx[0] - from->cx[0], opp->cy[0] - from->cy[0]};
@@ -980,7 +943,6 @@ bool oppo_on_line(struct blob *opp, struct blob *from, double *to, double min_di
     double product = so[0] * sp[0] + so[1] * sp[1];
     if (product <= 0.0)
     {
-        // fprintf(stderr, "22222222222222\n");
         return false;
     }
     double norm_sp2 = sp[0] * sp[0] + sp[1] * sp[1];
@@ -988,12 +950,12 @@ bool oppo_on_line(struct blob *opp, struct blob *from, double *to, double min_di
     double intersect[] = {projection * sp[0] + from->cx[0], projection * sp[1] + from->cy[0]};
     if (pow(opp->cx[0] - intersect[0], 2) + pow(opp->cy[0] - intersect[1], 2) > pow(min_dist, 2))
     {
-        // fprintf(stderr, "333333333333\n");
         return false;
     }
     return true;
 }
 
+/*Return true if we are at the kick position and update the state*/
 bool at_kick_pos(int *state, struct RoboAI *ai)
 {
     double gate[] = {(1 - ai->st.side) * FIELD_LENGTH, -FIELD_WIDTH / 2.0};
@@ -1003,7 +965,6 @@ bool at_kick_pos(int *state, struct RoboAI *ai)
 
     if (ai->st.opp && ai->st.ball && ai->st.self)
     {
-        // fprintf(stderr, "1111111111111\n");
         block = oppo_on_line(ai->st.opp, ai->st.ball, gate, OPPO_RADIUS * 1.5);
     }
 
@@ -1016,12 +977,10 @@ bool at_kick_pos(int *state, struct RoboAI *ai)
                 if (ai->st.ball->cy[0] - sy > 0.0)
                 {
                     *state = KICK_LEFT;
-                    // fprintf(stderr, "1111111111111\n" );
                 }
                 else
                 {
                     *state = KICK_RIGHT;
-                    // fprintf(stderr, "22222222222222222\n");
                 }
             }
             else
@@ -1029,12 +988,10 @@ bool at_kick_pos(int *state, struct RoboAI *ai)
                 if (ai->st.ball->cy[0] - sy > 0.0)
                 {
                     *state = KICK_RIGHT;
-                    // fprintf(stderr, "333333333333\n");
                 }
                 else
                 {
                     *state = KICK_LEFT;
-                    // fprintf(stderr, "4444444444444\n");
                 }
             }
             return true;
@@ -1054,8 +1011,9 @@ bool at_kick_pos(int *state, struct RoboAI *ai)
     {
         return false;
     }
-
 }
+
+/*round a double*/
 int my_round(double number)
 {
     int ret = round(number);
@@ -1069,6 +1027,8 @@ int my_round(double number)
     }
     return ret;
 }
+
+/*apply the calculated left and right power*/
 void apply_power(int left_power, int right_power)
 {
     pre_r_power = right_power;
@@ -1081,13 +1041,9 @@ void apply_power(int left_power, int right_power)
     {
         drive_custom(-right_power, -left_power);
     }
-    //fprintf(stderr, "left: %d right: %d", left_power, right_power);
-    // sleep(0.1);
-    // all_stop();
-    // sleep(5);
-
 }
 
+/*move the robot to the direction specified by theta*/
 void move(double theta, struct RoboAI *ai)
 {
     double left_power = 0.0;
@@ -1122,6 +1078,7 @@ void move(double theta, struct RoboAI *ai)
     apply_power(my_round(left_power), my_round(right_power));
 }
 
+/*reverse the robot's moving direction*/
 void reverse_dir(struct blob *b)
 {
     int i;
@@ -1139,6 +1096,7 @@ void reverse_dir(struct blob *b)
     }
 }
 
+/*chase the ball*/
 void chase(struct RoboAI *ai, double *pos)
 {
     // ball position
@@ -1158,17 +1116,14 @@ void chase(struct RoboAI *ai, double *pos)
     double theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
     if (ai->st.opp)
     {
-        // fprintf(stderr, "44444444\n");
         if (fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]) < 1.3 * (KICKER_LENGTH + OPPO_RADIUS) && fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]) < 1.3 * (KICKER_LENGTH + OPPO_RADIUS))
         {
-            // fprintf(stderr, "x: %f,  y: %f, 1.2 * (KICKER_LENGTH + OPPO_RADIUS): %f\n",fabs(ai->st.opp->cx[0] - ai->st.self->cx[0]),fabs(ai->st.opp->cy[0] - ai->st.self->cy[0]),  1.2 * (KICKER_LENGTH + OPPO_RADIUS));
             bool block = blocking(pos, ai);
             if (block)
             {
                 double leave_angle;
                 leave_angle = atan2(ai->st.self->cx[0] - ai->st.opp->cx[0], ai->st.self->cy[0] - ai->st.opp->cy[0]);
                 td = atan2(sin(td)+sin(leave_angle)*0.75,cos(td)+cos(leave_angle)*0.75);
-
                 theta = atan2(sin(td) * cos(th) - sin(th) * cos(td), cos(td) * cos(th) + sin(td) * sin(th));
             }
         }
@@ -1183,24 +1138,14 @@ void chase(struct RoboAI *ai, double *pos)
         theta = theta + PI;
         reverse_dir(ai->st.self);
     }
-    //fprintf(stderr, "Robot: Current position: (%f,%f), current heading: %f, AI state=%d\n", ai->st.self->cx[0], ai->st.self->cy[0], atan2(ai->st.self->mx, ai->st.self->my), ai->st.state);
-    //fprintf(stderr, "Ball: Current position: (%f,%f), current heading: [%f, %f], AI state=%d\n", ai->st.ball->cx[0], ai->st.ball->cy[0], ai->st.ball->mx, ai->st.ball->my, ai->st.state);
-    //fprintf(stderr, "Theta: %f, Heading: %f, dir: %f\n", theta, atan2(h[0], h[1]), atan2(d[0], d[1]));
-    //fprintf(stderr, "H: [%f, %f], D: [%f, %f]\n", h[0], h[1], d[0], d[1]);
     move(theta, ai);
 }
 
+/*Return true if opponent is blocking the ball*/
 bool blocking(double *pos, struct RoboAI *ai)
 {
-    // pos[0] = 100.0;
-    // pos[1] = 0;
-    // ai->st.self->cx[0] = -100;
-    // ai->st.self->cy[0] = 0.0;
-    // ai->st.opp->cx[0] = -200.0;
-    // ai->st.opp->cy[0] = 0.0;
     if (!ai->st.opp || !ai->st.ball || !ai->st.self)
     {
-        // fprintf(stderr, "1111111111111\n");
         return false;
     }
     double so[] = {ai->st.opp->cx[0] - ai->st.self->cx[0], ai->st.opp->cy[0] - ai->st.self->cy[0]};
@@ -1208,7 +1153,6 @@ bool blocking(double *pos, struct RoboAI *ai)
     double product = so[0] * sp[0] + so[1] * sp[1];
     if (product <= 0.0)
     {
-        // fprintf(stderr, "22222222222222\n");
         return false;
     }
     double norm_sp2 = sp[0] * sp[0] + sp[1] * sp[1];
@@ -1216,7 +1160,6 @@ bool blocking(double *pos, struct RoboAI *ai)
     double intersect[] = {projection * sp[0] + ai->st.self->cx[0], projection * sp[1] + ai->st.self->cy[0]};
     if (pow(ai->st.opp->cx[0] - intersect[0], 2) + pow(ai->st.opp->cy[0] - intersect[1], 2) > pow((KICKER_LENGTH + OPPO_RADIUS) * 1.2, 2))
     {
-        // fprintf(stderr, "333333333333\n");
         return false;
     }
     return true;
