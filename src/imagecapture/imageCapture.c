@@ -115,14 +115,15 @@ void kbHandler(unsigned char key, int x, int y)
  // Controls for recording the corners of the playing field
  if (key =='z')
  {
-    Mcorners[0][0]=155.000000;
-    Mcorners[0][1]=5.000000;
-    Mcorners[1][0]=1080.000000;
-    Mcorners[1][1]=10.000000;
-    Mcorners[2][0]=1195.000000;
-    Mcorners[2][1]=695.000000;
-    Mcorners[3][0]=15.000000;
-    Mcorners[3][1]=715.000000;
+    Mcorners[0][0]=290.000000;
+    Mcorners[0][1]=15.000000;
+    Mcorners[1][0]=1002.000000;
+    Mcorners[1][1]=8.000000;
+    Mcorners[2][0]=1152.000000;
+    Mcorners[2][1]=638.000000;
+    Mcorners[3][0]=227.000000;
+    Mcorners[3][1]=658.000000;
+
    cornerIdx = 4;
    toggleProc=0;
  }
@@ -166,7 +167,7 @@ void kbHandler(unsigned char key, int x, int y)
  if (key=='j') {if (DIR_L==0) {DIR_L=1; DIR_R=0; DIR_FWD=0; DIR_BACK=0; pivot_left_speed(50);} else {DIR_L=0; all_stop();}}
  if (key=='l') {if (DIR_R==0) {DIR_R=1; DIR_L=0; DIR_FWD=0; DIR_BACK=0; pivot_right_speed(50);} else {DIR_R=0; all_stop();}}
  if (key=='k') {if (DIR_BACK==0) {DIR_BACK=1; DIR_L=0; DIR_R=0; DIR_FWD=0; reverse_speed(75);} else {DIR_BACK=0; all_stop();}}
- if (key=='o') {all_stop();doAI=0;}	// <-- Important!
+ if (key=='o') {all_stop(); stop_kicker(); doAI=0;}	// <-- Important!
  if (key=='u') {kick_speed(100);}
  if (key=='y') {kick_speed(-100);}
 }
@@ -1038,6 +1039,20 @@ struct image *renderBlobs(unsigned char *fgIm, int sx, int sy, struct image *lab
     cG=64.0;
     cB=255.0;
    }
+   // else if (p->idtype==4)
+   // {
+   //  cR=255.0;
+   //  cG=255.0;
+   //  cB=32.0;
+   //  drawLine(p->cx[0]-1,p->cy[0],p->mx,p->my,55,cR,cG,cB,blobIm);
+   //  drawLine(p->cx[0],p->cy[0]-1,p->mx,p->my,55,cR,cG,cB,blobIm);
+   //  drawLine(p->cx[0]+1,p->cy[0],p->mx,p->my,55,cR,cG,cB,blobIm);
+   //  drawLine(p->cx[0],p->cy[0]+1,p->mx,p->my,55,cR,cG,cB,blobIm);
+   //  drawLine(p->cx[0],p->cy[0],p->mx,p->my,55,cR,cG,cB,blobIm);
+   //  cR=150.0;
+   //  cG=150.0;
+   //  cB=0.0;
+   // }
    drawBox(p->x1-1,p->y1,p->x2-1,p->y2,cR,cG,cB,blobIm);
    drawBox(p->x1+1,p->y1,p->x2+1,p->y2,cR,cG,cB,blobIm);
    drawBox(p->x1,p->y1-1,p->x2,p->y2-1,cR,cG,cB,blobIm);

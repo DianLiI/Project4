@@ -36,21 +36,21 @@
 
 #define ANGLE_TOL 0.4
 #define PI 3.14159265359
-#define SLOW_MOVE_SPEED 38
-#define FAST_MOVE_SPEED 45
-#define MAX_SPEED 65
+#define SLOW_MOVE_SPEED 40
+#define FAST_MOVE_SPEED 65
+#define MAX_SPEED 90
 #define KICK_SPEED 100
 #define POSITION_TOL 30
 #define KICKER_LENGTH 140// 75  
 #define BOT_HIGHT 190
 #define BALL_HIGHT 30
-#define OPPO_RADIUS 180
-#define OPP_HIGHT 160.0
-#define FIELD_LENGTH 1695//1.4
-#define FIELD_WIDTH 1170//0.8
-#define CAM_DISTANCE 45//0.2
-#define CAM_X 1000
-#define CAM_HIGHT 1665//1.3
+#define OPPO_RADIUS 150
+#define OPP_HIGHT 90
+#define FIELD_LENGTH 1680//1.4
+#define FIELD_WIDTH 1620//0.8
+#define CAM_DISTANCE 360//0.2
+#define CAM_X 740
+#define CAM_HIGHT 2110//1.3
 #define SCREEN_WIDTH 1024
 #define SCREEN_HIGHT 768
 /*states*/
@@ -78,7 +78,7 @@ struct RoboAI *myai;
 double cam_pos[] = {CAM_X,-(FIELD_WIDTH+CAM_DISTANCE)};
 
 int pre_l_power=0, pre_r_power=0;
-int current_speed;
+int current_speed = MAX_SPEED;
 
 
 void clear_motion_flags(struct RoboAI *ai)
@@ -189,10 +189,40 @@ void track_agents(struct RoboAI *ai, struct blob *blobs)
             ai->st.ball->my = vy;
         }
     }
-    else
-    {
-        ai->st.ball = NULL;
-    }
+    // Find the mark
+    // p = id_coloured_blob(ai, blobs, 0);
+    // if (p)
+    // {
+    //     if (ai->st.ball != NULL && ai->st.ball != p)
+    //     {
+    //         ai->st.mark->idtype = 4;
+    //         ai->st.mark->p = 0;
+    //     }
+    //     ai->st.markID = 1;
+    //     ai->st.mark = p;
+    //     ai->st.mvx = p->cx[0] - ai->st.old_mcx;
+    //     ai->st.mvy = p->cy[0] - ai->st.old_mcy;
+    //     ai->st.old_mcx = p->cx[0];
+    //     ai->st.old_mcy = p->cy[0];
+    //     ai->st.mark->p = 0;
+    //     ai->st.mark->idtype = 3;
+    //     vx = ai->st.mvx;
+    //     vy = ai->st.mvy;
+    //     mg = sqrt((vx * vx) + (vy * vy));
+    //     if (mg > NOISE_VAR)       // Enable? disable??
+    //     {
+    //         ai->st.mark->vx[0] = vx;
+    //         ai->st.mark->vy[0] = vy;
+    //         vx /= mg;
+    //         vy /= mg;
+    //         ai->st.mark->mx = vx;
+    //         ai->st.mark->my = vy;
+    //     }
+    // }
+    // else
+    // {
+    //     ai->st.mark = NULL;
+    // }
 
     // ID our bot
     if (ai->st.botCol == 0) p = id_coloured_blob(ai, blobs, 1);
@@ -325,7 +355,7 @@ int setupAI(int mode, int own_col, struct RoboAI *ai)
     ai->st.ball = NULL;
     ai->st.self = NULL;
     ai->st.opp = NULL;
-    ai->st.side = -1;
+    ai->st.side = 0;
     ai->st.botCol = own_col;
     ai->st.old_bcx = 0;
     ai->st.old_bcy = 0;
@@ -739,12 +769,12 @@ void init_my_ai(struct RoboAI *ai)
         myai->st.ball = malloc(sizeof(struct blob));
         myai->st.self = malloc(sizeof(struct blob));
         myai->st.opp = malloc(sizeof(struct blob));
+        myai->st.side = 2;
     }
     myai->st.state = ai->st.state;
     init_blob(myai->st.ball, ai->st.ball, BALL_HIGHT);
     init_blob(myai->st.self, ai->st.self, BOT_HIGHT);
     init_blob(myai->st.opp, ai->st.opp, OPP_HIGHT);
-    // myai->st.side = ai->st.side;
     myai->st.old_bcx = 0;
     myai->st.old_bcy = 0;
     myai->st.old_scx = 0;
@@ -832,8 +862,10 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     myblob->vy[0] = (myblob->cy[0] - myblob->cy[1]) / timediff;
 
     // Smoothed velocity vector
-    myblob->vx[0] = (.5 * myblob->vx[0]) + (.25 * myblob->vx[1]) + (.125 * myblob->vx[2]) + (.0625 * myblob->vx[3]) + (.0625 * myblob->vx[4]);
-    myblob->vy[0] = (.5 * myblob->vy[0]) + (.25 * myblob->vy[1]) + (.125 * myblob->vy[2]) + (.0625 * myblob->vy[3]) + (.0625 * myblob->vy[4]);
+    // myblob->vx[0] = (.5 * myblob->vx[0]) + (.25 * myblob->vx[1]) + (.125 * myblob->vx[2]) + (.0625 * myblob->vx[3]) + (.0625 * myblob->vx[4]);
+    // myblob->vy[0] = (.5 * myblob->vy[0]) + (.25 * myblob->vy[1]) + (.125 * myblob->vy[2]) + (.0625 * myblob->vy[3]) + (.0625 * myblob->vy[4]);
+    myblob->vx[0] = (.7 * myblob->vx[0]) + (.2 * myblob->vx[1]) + (.1 * myblob->vx[2]);
+    myblob->vy[0] = (.7 * myblob->vy[0]) + (.2 * myblob->vy[1]) + (.1 * myblob->vy[2]);
     //fprintf(stderr, "myspeed:  [%f, %f]     speed [%f, %f]\n" , myblob->vx[0], myblob->vy[0], p->vx[0], p->vy[0]);
     // If the current motion vector is meaningful (x or y component more than 1 pixel/frame) update
     // blob heading as a unit vector.
@@ -849,24 +881,39 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
     //     myblob->mx = sin(pre_heading + theta);
     //     myblob->my = cos(pre_heading + theta);
     // }
-    if (fabs(pre_l_power - pre_r_power) > current_speed * 0.3)
-    {
-        double pre_heading = atan2(myblob->mx, myblob->my);
-        double theta;
-        theta = getTimeDiff() * (pre_l_power - pre_r_power) * PI / 100.0 * (current_speed / 100.0);
-        
-        myblob->mx = sin(pre_heading + theta);
-        myblob->my = cos(pre_heading + theta);
-        // fprintf(stderr, "my111111111111111111\n" );
-    }
-    else if (fabs(myblob->vx[0]) > noiseV && fabs(myblob->vy[0]) > noiseV)
+    double pre_heading = atan2(myblob->mx, myblob->my);
+    double theta;
+    theta = getTimeDiff() * (pre_l_power - pre_r_power) * PI / 100.0 * (current_speed / 100.0);
+    double my_mx = sin(pre_heading + theta);
+    double my_my = cos(pre_heading + theta);
+    double mx = myblob->mx;
+    double my = myblob->my;
+    if (fabs(myblob->vx[0]) > noiseV && fabs(myblob->vy[0]) > noiseV)
     {
         len = 1.0 / sqrt((myblob->vx[0] * myblob->vx[0]) + (myblob->vy[0] * myblob->vy[0]));
-        myblob->mx = myblob->vx[0] * len;
-        myblob->my = myblob->vy[0] * len;
-        // fprintf(stderr, "his22222222222222\n" );
+        mx = myblob->vx[0] * len;
+        my = myblob->vy[0] * len;
     }
-
+    double diff = fabs(pre_l_power - pre_r_power);
+    if (diff > current_speed * 0.5)
+    {
+        myblob->mx = my_mx;
+        myblob->my = my_my;
+    }
+    // else if (diff < current_speed * 0.2)
+    // {
+    //     myblob->mx = mx;
+    //     myblob->my = my;
+    // }
+    else
+    {
+        myblob->mx = mx * (1 - diff / (double)current_speed * 2.0) + my_mx * diff / (double)current_speed * 2.0;
+        myblob->my = my * (1 - diff / (double)current_speed * 2.0) + my_my * diff / (double)current_speed * 2.0;
+        double norm = 1 / sqrt(myblob->mx * myblob->mx + myblob->my * myblob->my);
+        myblob->mx = myblob->mx * norm;
+        myblob->my = myblob->my * norm;
+        fprintf(stderr, "myblob->mx: %f,    myblob->my: %f\n", myblob->mx, myblob->my);
+    }
     // myblob->vx[0] = p->vx[0];
     // myblob->vy[0] = b->vy[0];
     // myblob->mx = b->mx;
@@ -874,7 +921,7 @@ void update_blob(struct blob *myblob, struct blob *p, double height)
 }
 void update_my_ai(struct RoboAI *ai)
 {
-    if (myai->st.side == -1)
+    if (myai->st.side > 1)
     {
         myai->st.side = ai->st.side;
     }

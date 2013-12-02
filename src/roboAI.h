@@ -65,7 +65,7 @@ struct AI_data{
 	int selfID;
 	int oppID;
 	int ballID;
-
+	int markID;
 	// Blob track data. Ball likely needs to be detected at each frame
 	// separately. So we keep old location to estimate v
 	struct blob *ball;		// Current ball blob
@@ -81,6 +81,10 @@ struct AI_data{
         struct blob *opp;		// Current opponent blob
 	double old_ocx, old_ocy;	// Previous opponent (cx,cy)
 	double ovx,ovy;		// Current opponent [vx vy]
+
+	// struct blob *mark;
+	// double old_mcx, old_mcy;
+	// double mvx,mvy;
 };
 
 struct RoboAI {
